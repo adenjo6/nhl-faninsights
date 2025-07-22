@@ -1,0 +1,13 @@
+.env
+frontend/.env*
+backend/.env
+
+backend/venv/
+
+# Python byte-code caches
+backend/**/__pycache__/
+backend/**/*.py[cod]  
+
+# Editor folders  
+backend/.vscode/
+backend/.idea/
