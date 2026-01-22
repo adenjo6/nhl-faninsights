@@ -1,0 +1,78 @@
+# ============================================================================
+# .dockerignore - Excludes files from Docker COPY operations
+# ============================================================================
+
+# -----------------------------------------------------------------------------
+# Python Runtime Files (don't need in container)
+# -----------------------------------------------------------------------------
+__pycache__/          # Python bytecode cache (auto-generated)
+*.py[cod]             # Compiled Python files (.pyc, .pyo, .pyd)
+*$py.class            # More compiled Python
+*.so                  # Compiled C extensions
+.Python               # Python build artifacts
+venv/                 # Virtual environment (500MB+, DON'T COPY!)
+env/                  # Alternative venv name
+ENV/                  # Another venv name
+*.egg-info/           # Package metadata
+
+# -----------------------------------------------------------------------------
+# Testing & Development (not needed in production)
+# -----------------------------------------------------------------------------
+.pytest_cache/        # Pytest cache
+.coverage             # Code coverage reports
+htmlcov/              # Coverage HTML reports
+*.log                 # Log files from local dev
+scripts/              # Your test/debug scripts folder
+
+# -----------------------------------------------------------------------------
+# IDE & Editor Files (personal, not needed in container)
+# -----------------------------------------------------------------------------
+.vscode/              # VS Code settings
+.idea/                # PyCharm settings
+*.swp                 # Vim swap files
+*.swo                 # More Vim files
+.DS_Store             # macOS folder metadata
+
+# -----------------------------------------------------------------------------
+# Git (version control not needed in container)
+# -----------------------------------------------------------------------------
+.git/                 # Git repository (can be 100s of MB!)
+.gitignore            # Git config file
+.gitattributes        # Git config
+
+# -----------------------------------------------------------------------------
+# Docker Files (don't copy Docker files into the image)
+# -----------------------------------------------------------------------------
+Dockerfile            # The Dockerfile itself
+.dockerignore         # This file
+docker-compose.yml    # Docker compose config
+
+# -----------------------------------------------------------------------------
+# Documentation (not needed at runtime)
+# -----------------------------------------------------------------------------
+README.md             # Docs
+*.md                  # All markdown files
+docs/                 # Documentation folder
+
+# -----------------------------------------------------------------------------
+# Environment Files (SECURITY: Don't copy secrets!)
+# -----------------------------------------------------------------------------
+.env                  # Local environment variables (contains secrets!)
+.env.*                # .env.local, .env.production, etc.
+*.pem                 # Private keys
+*.key                 # API keys
+
+# -----------------------------------------------------------------------------
+# Database Files (don't copy local DB into container)
+# -----------------------------------------------------------------------------
+*.db                  # SQLite databases
+*.sqlite              # SQLite
+*.sqlite3             # SQLite
+
+# -----------------------------------------------------------------------------
+# Temporary Files
+# -----------------------------------------------------------------------------
+*.tmp                 # Temp files
+*.bak                 # Backup files
+*.swp                 # Editor swap files
+*~                    # Editor backup files

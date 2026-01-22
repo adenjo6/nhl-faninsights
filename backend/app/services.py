@@ -1,7 +1,7 @@
-import requests
+"""
+DEPRECATED: Re-export module for backwards compatibility.
+All services are now in app.services/ package.
+"""
 
-def fetch_boxscore(game_id: int) -> dict:
-    url = f"https://api-web.nhle.com/v1/gamecenter/{game_id}/boxscore"
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.json() 
+# Re-export everything from the services package
+from app.services import *  # noqa

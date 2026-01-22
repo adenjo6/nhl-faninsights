@@ -1,0 +1,108 @@
+# Docker Compose for NHL Fan Insights
+# Full-stack orchestration: Backend, Frontend, PostgreSQL, Redis
+# Usage: docker-compose up
+
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: nhl-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nhluser
+      POSTGRES_PASSWORD: nhlpassword
+      POSTGRES_DB: nhl
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nhluser -d nhl"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nhl-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: nhl-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - nhl-network
+
+  # Backend (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nhl-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # Database
+      DATABASE_URL: postgresql://nhluser:nhlpassword@postgres:5432/nhl
+
+      # Redis
+      REDIS_ENABLED: "true"
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_DB: 0
+
+      # API Keys (pass from host .env)
+      YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
+      CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+
+      # App Settings
+      SHARKS_TEAM_ID: SJS
+      TIMEZONE: America/Los_Angeles
+      ENVIRONMENT: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - nhl-network
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nhl-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - nhl-network
+
+# Named volumes for data persistence
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# Network for service communication
+networks:
+  nhl-network:
+    driver: bridge
