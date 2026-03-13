@@ -58,10 +58,10 @@ def get_recent_games(
             has_videos=bool(nhl_video or prof_video)
         ))
 
-    # Cache the result for 5 minutes (300 seconds)
-    cache.set(cache_key, summaries, ttl=300)
-
-    return summaries
+    # Cache the result as dicts for 5 minutes (300 seconds)
+    result = [s.model_dump() for s in summaries]
+    cache.set(cache_key, result, ttl=300)
+    return result
 
 
 @router.get("/{game_id}", response_model=GameDetail)
@@ -117,10 +117,10 @@ def get_game(game_id: int, db: Session = Depends(get_db)):
         ]
     )
 
-    # Cache the result for 5 minutes (300 seconds)
-    cache.set(cache_key, game_detail, ttl=300)
-
-    return game_detail
+    # Cache the result as dict for 5 minutes (300 seconds)
+    result = game_detail.model_dump()
+    cache.set(cache_key, result, ttl=300)
+    return result
 
 
 @router.post("", response_model=GameDetail, status_code=201)
