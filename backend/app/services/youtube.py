@@ -11,6 +11,25 @@ if settings.YOUTUBE_API_KEY:
 else:
     youtube = None
 
+# Channel IDs
+NHL_CHANNEL_ID = "UCqFMzb-4AUf6WAIbl132QKA"
+SPORTSNET_CHANNEL_ID = "UCVhibwHk4WKw4leUt6JfRLg"
+
+# Team abbreviation to name mapping
+TEAM_NAMES = {
+    "SJS": "Sharks", "VGK": "Golden Knights", "LAK": "Kings",
+    "ANA": "Ducks", "SEA": "Kraken", "VAN": "Canucks",
+    "EDM": "Oilers", "CGY": "Flames", "WPG": "Jets",
+    "MIN": "Wild", "COL": "Avalanche", "DAL": "Stars",
+    "STL": "Blues", "CHI": "Blackhawks", "NSH": "Predators",
+    "DET": "Red Wings", "CBJ": "Blue Jackets", "TBL": "Lightning",
+    "FLA": "Panthers", "CAR": "Hurricanes", "WSH": "Capitals",
+    "NYR": "Rangers", "NYI": "Islanders", "NJD": "Devils",
+    "PHI": "Flyers", "PIT": "Penguins", "BOS": "Bruins",
+    "TOR": "Maple Leafs", "OTT": "Senators", "MTL": "Canadiens",
+    "BUF": "Sabres", "UTA": "Utah Hockey Club", "ARI": "Coyotes",
+}
+
 
 def search_game_highlights(
     away_team: str,
@@ -41,8 +60,9 @@ def search_game_highlights(
             "other_highlights": []
         }
 
-    # Format search query
-    query = f"{away_team} vs {home_team} highlights {game_date.strftime('%B %d %Y')}"
+    away_name = TEAM_NAMES.get(away_team, away_team)
+    home_name = TEAM_NAMES.get(home_team, home_team)
+    date_str = game_date.strftime('%B %d, %Y')
 
     results = {
         "nhl_official": None,
@@ -50,30 +70,63 @@ def search_game_highlights(
         "other_highlights": []
     }
 
-    # Search 1: Official NHL channel
+    # Search 1: Official NHL channel with exact title template
+    # Template: "{Away} vs. {Home} | NHL Highlights | {Month} {DD}, {YYYY}"
     try:
+        nhl_query = f"{away_name} vs. {home_name} | NHL Highlights | {date_str}"
         nhl_search = youtube.search().list(
-            q=query,
-            channelId="UCqFMzb-4AUf6WAIbl132QKA",  # Official NHL channel
+            q=nhl_query,
+            channelId=NHL_CHANNEL_ID,
             type="video",
             part="id,snippet",
             maxResults=1,
-            order="date",
+            order="relevance",
             publishedAfter=game_date.isoformat() + "Z"
         ).execute()
 
         if nhl_search.get("items"):
             item = nhl_search["items"][0]
             snippet = item["snippet"]
-            results["nhl_official"] = {
-                "video_id": item["id"]["videoId"],
-                "title": snippet["title"],
-                "channel_name": snippet["channelTitle"],
-                "thumbnail_url": snippet["thumbnails"]["high"]["url"] if "high" in snippet["thumbnails"] else snippet["thumbnails"]["default"]["url"],
-                "published_at": datetime.fromisoformat(snippet["publishedAt"].replace("Z", "+00:00"))
-            }
+            # Only accept if title contains "NHL Highlights" to avoid wrong matches
+            if "nhl highlights" in snippet["title"].lower():
+                results["nhl_official"] = {
+                    "video_id": item["id"]["videoId"],
+                    "title": snippet["title"],
+                    "channel_name": snippet["channelTitle"],
+                    "thumbnail_url": snippet["thumbnails"]["high"]["url"] if "high" in snippet["thumbnails"] else snippet["thumbnails"]["default"]["url"],
+                    "published_at": datetime.fromisoformat(snippet["publishedAt"].replace("Z", "+00:00"))
+                }
     except Exception as e:
         print(f"Error fetching NHL official highlights: {e}")
+
+    # Search 1b: Fallback to Sportsnet if NHL channel had no results
+    # Template: "NHL Highlights | {Away} vs {Home} - {Month} {DD}, {YYYY}"
+    if not results["nhl_official"]:
+        try:
+            sportsnet_query = f"NHL Highlights | {away_name} vs. {home_name} - {date_str}"
+            sn_search = youtube.search().list(
+                q=sportsnet_query,
+                channelId=SPORTSNET_CHANNEL_ID,
+                type="video",
+                part="id,snippet",
+                maxResults=1,
+                order="relevance",
+                publishedAfter=game_date.isoformat() + "Z"
+            ).execute()
+
+            if sn_search.get("items"):
+                item = sn_search["items"][0]
+                snippet = item["snippet"]
+                if "nhl highlights" in snippet["title"].lower():
+                    results["nhl_official"] = {
+                        "video_id": item["id"]["videoId"],
+                        "title": snippet["title"],
+                        "channel_name": snippet["channelTitle"],
+                        "thumbnail_url": snippet["thumbnails"]["high"]["url"] if "high" in snippet["thumbnails"] else snippet["thumbnails"]["default"]["url"],
+                        "published_at": datetime.fromisoformat(snippet["publishedAt"].replace("Z", "+00:00"))
+                    }
+        except Exception as e:
+            print(f"Error fetching Sportsnet highlights: {e}")
 
     # Search 2: Professor Hockey
     # Professor Hockey uses format: "San Jose Sharks 25-26 Regular Season Review: Game X"
@@ -112,8 +165,9 @@ def search_game_highlights(
 
     # Search 3: Other highlights
     try:
+        other_query = f"{away_name} vs {home_name} highlights {game_date.strftime('%B %d %Y')}"
         other_search = youtube.search().list(
-            q=query,
+            q=other_query,
             type="video",
             part="id,snippet",
             maxResults=max_results,

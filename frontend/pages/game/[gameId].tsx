@@ -8,7 +8,7 @@ type GameDetail = {
   home_team: string;
   away_score: number;
   home_score: number;
-  game_date: string;
+  game_date_utc: string;
   nhl_video_id?: string;
   professor_hockey_video_id?: string;
   status: string;
@@ -81,7 +81,7 @@ export default function GamePage() {
         <div className="flex justify-between items-center mb-4">
           <div>
             <div className="text-sm text-gray-500 mb-2">
-              {new Date(game.game_date).toLocaleDateString('en-US', {
+              {new Date(game.game_date_utc).toLocaleDateString('en-US', {
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',

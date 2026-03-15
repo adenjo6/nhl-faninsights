@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy import text
 from app.api.v1.routers import recap, games, comments, prospects, reddit, monitoring
-from app.scheduler import start_scheduler, shutdown_scheduler
+from app.jobs.scheduler import start_scheduler, shutdown_scheduler
 from app.db.session import SessionLocal
 from app.config import settings
 from app.services.redis_cache import cache

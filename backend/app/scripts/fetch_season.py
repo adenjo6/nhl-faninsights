@@ -111,10 +111,10 @@ def fetch_videos_for_completed_games(db: Session, limit: int = 10):
     """
     print(f"\n🎥 Fetching videos for completed games...")
 
-    # Get completed games without videos
+    # Get completed games missing either video type
     games = db.query(Game).filter(
         Game.status.in_(['FINAL', 'OFF']),
-        Game.videos_fetched == False
+        (Game.highlights_fetched == False) | (Game.professor_hockey_fetched == False)
     ).order_by(Game.game_date_utc.desc()).limit(limit).all()
 
     if not games:
@@ -182,8 +182,13 @@ def fetch_videos_for_completed_games(db: Session, limit: int = 10):
                     print(f"    ✓ Added Professor Hockey video: {video_data['video_id']}")
                     videos_found += 1
 
-            # Mark game as videos fetched
-            game.videos_fetched = True
+            # Mark each video type as fetched independently
+            if videos.get('nhl_official'):
+                game.highlights_fetched = True
+            if videos.get('professor_hockey'):
+                game.professor_hockey_fetched = True
+            # Always mark highlights as attempted so we don't retry indefinitely
+            game.highlights_fetched = True
             db.commit()
 
         except Exception as e:
@@ -208,7 +213,7 @@ def main():
 
         # Fetch videos for completed games
         if total_games > 0:
-            videos_found = fetch_videos_for_completed_games(db, limit=20)
+            videos_found = fetch_videos_for_completed_games(db, limit=82)
 
         print("\n" + "=" * 70)
         print("✅ Season data fetch complete!")

@@ -102,7 +102,7 @@ try:
     print("\n" + "="*70)
     print("✅ DATABASE RESET COMPLETE!")
     print("="*70)
-    print("\nNow run: python3 fetch_sharks_season.py")
+    print("\nNow run: python -m app.scripts.fetch_season")
     print("This will fetch videos for all completed games.\n")
 
 except Exception as e:

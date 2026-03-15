@@ -69,21 +69,41 @@ def delete_game(db: Session, game_id: int) -> bool:
     return True
 
 
-def get_games_needing_processing(db: Session, status: str = "FINAL") -> list[Game]:
-    """Get games that need video/data processing."""
+def get_games_needing_highlights(db: Session, status: str = "FINAL") -> list[Game]:
+    """Get games that need highlight video processing."""
     return db.query(Game).filter(
         Game.status == status,
-        Game.videos_fetched == False
+        Game.highlights_fetched == False
     ).all()
 
 
-def mark_videos_fetched(db: Session, game_id: int) -> bool:
-    """Mark that videos have been fetched for a game."""
+def get_games_needing_professor_hockey(db: Session, status: str = "FINAL") -> list[Game]:
+    """Get games that need Professor Hockey video processing."""
+    return db.query(Game).filter(
+        Game.status == status,
+        Game.professor_hockey_fetched == False
+    ).all()
+
+
+def mark_highlights_fetched(db: Session, game_id: int) -> bool:
+    """Mark that highlight videos have been fetched for a game."""
     game = get_game_by_id(db, game_id)
     if not game:
         return False
 
-    game.videos_fetched = True
+    game.highlights_fetched = True
+    game.status_updated_at = datetime.utcnow()
+    db.commit()
+    return True
+
+
+def mark_professor_hockey_fetched(db: Session, game_id: int) -> bool:
+    """Mark that Professor Hockey video has been fetched for a game."""
+    game = get_game_by_id(db, game_id)
+    if not game:
+        return False
+
+    game.professor_hockey_fetched = True
     game.status_updated_at = datetime.utcnow()
     db.commit()
     return True

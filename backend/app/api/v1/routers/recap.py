@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.schemas.recap import Recap
 from app.crud.recap import get_cached, create_recap, list_all
-from app.services import fetch_boxscore, transform_boxscore
+from app.services.nhl import fetch_boxscore, transform_boxscore
 from app.api.v1.deps import get_db
 
 router = APIRouter()

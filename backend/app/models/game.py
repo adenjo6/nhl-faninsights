@@ -32,7 +32,8 @@ class Game(Base):
     # Processing state tracking
     basic_stats_fetched = Column(Boolean, default=False)
     reddit_fetched = Column(Boolean, default=False)
-    videos_fetched = Column(Boolean, default=False)
+    highlights_fetched = Column(Boolean, default=False)
+    professor_hockey_fetched = Column(Boolean, default=False)
     quotes_fetched = Column(Boolean, default=False)
 
     # Timestamps for processing stages
