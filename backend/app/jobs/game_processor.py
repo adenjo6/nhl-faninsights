@@ -1,6 +1,6 @@
 """Game data processing jobs - handles staggered fetching and processing."""
 
-from datetime import datetime, date, timedelta
+from datetime import datetime, date
 from sqlalchemy.orm import Session
 import logging
 
@@ -17,15 +17,13 @@ def check_upcoming_games(db: Session) -> int:
     """
     Check NHL API for upcoming Sharks games and create/update Game records.
 
-    Returns: Number of games scheduled for processing
+    Returns: Number of games created
     """
-    from app.scheduler import schedule_post_game_processing
-
     # Fetch Sharks schedule from today forward
     today = date.today()
     games = services.fetch_team_schedule(settings.SHARKS_TEAM_ID, start_date=today)
 
-    games_scheduled = 0
+    games_created = 0
 
     for game_data in games:
         game_id = game_data["id"]
@@ -47,27 +45,9 @@ def check_upcoming_games(db: Session) -> int:
             db.add(game)
             db.commit()
             logger.info(f"Created new game record: {game_id} - {game.away_team} @ {game.home_team}")
+            games_created += 1
 
-        # If game just finished and not yet processed, schedule processing
-        if game_status in ["FINAL", "OFF"] and game.status != "ARCHIVED":
-            if not game.basic_stats_fetched:
-                # Game finished but not processed yet
-                # Estimate end time (games usually ~2.5 hours after start)
-                estimated_end = game_date + timedelta(hours=2, minutes=30)
-
-                # If game ended in the past, start processing immediately
-                if estimated_end < datetime.now(game_date.tzinfo):
-                    estimated_end = datetime.now(game_date.tzinfo)
-
-                schedule_post_game_processing(game_id, estimated_end)
-                games_scheduled += 1
-
-                # Update game status
-                game.status = "FINAL"
-                game.status_updated_at = datetime.utcnow()
-                db.commit()
-
-    return games_scheduled
+    return games_created
 
 
 def process_game_immediate(db: Session, game_id: int):

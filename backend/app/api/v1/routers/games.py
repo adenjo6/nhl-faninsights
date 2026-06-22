@@ -123,6 +123,22 @@ def get_game(game_id: int, db: Session = Depends(get_db)):
     return result
 
 
+@router.get("/{game_id}/sentiment")
+def get_game_sentiment(game_id: int, db: Session = Depends(get_db)):
+    """Get Reddit sentiment analysis for a game."""
+    game = game_crud.get_game_by_id(db, game_id)
+    if not game:
+        raise HTTPException(status_code=404, detail="Game not found")
+
+    if not game.reddit_sentiment:
+        raise HTTPException(status_code=404, detail="No sentiment data available for this game")
+
+    return {
+        "game_id": game.game_id,
+        "sentiment": game.reddit_sentiment,
+    }
+
+
 @router.post("", response_model=GameDetail, status_code=201)
 def create_game(game_data: GameCreate, db: Session = Depends(get_db)):
     """

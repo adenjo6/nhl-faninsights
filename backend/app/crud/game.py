@@ -3,10 +3,11 @@ CRUD operations for Game model.
 """
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional
 from app.models.game import Game
 from app.models.video import Video
+from app.services.redis_cache import cache
 
 
 def get_game_by_id(db: Session, game_id: int) -> Optional[Game]:
@@ -69,6 +70,14 @@ def delete_game(db: Session, game_id: int) -> bool:
     return True
 
 
+def get_games_needing_basic_stats(db: Session, status: str = "FINAL") -> list[Game]:
+    """Get games that need basic stats (boxscore, scorers) processing."""
+    return db.query(Game).filter(
+        Game.status == status,
+        Game.basic_stats_fetched == False
+    ).all()
+
+
 def get_games_needing_highlights(db: Session, status: str = "FINAL") -> list[Game]:
     """Get games that need highlight video processing."""
     return db.query(Game).filter(
@@ -106,4 +115,80 @@ def mark_professor_hockey_fetched(db: Session, game_id: int) -> bool:
     game.professor_hockey_fetched = True
     game.status_updated_at = datetime.utcnow()
     db.commit()
+    return True
+
+
+def get_games_needing_reddit(db: Session, status: str = "FINAL") -> list[Game]:
+    """Get completed games that need Reddit sentiment analysis."""
+    return db.query(Game).filter(
+        Game.status == status,
+        Game.reddit_fetched == False
+    ).all()
+
+
+def get_games_needing_thread_discovery(db: Session) -> list[Game]:
+    """Games that are FINAL/OFF, have no thread_id yet, and where the
+    PGT-creation window has opened (game_date_utc + 2h <= now)."""
+    cutoff = datetime.utcnow() - timedelta(hours=2)
+    return (
+        db.query(Game)
+        .filter(
+            Game.status.in_(["FINAL", "OFF"]),
+            Game.reddit_thread_id.is_(None),
+            Game.game_date_utc <= cutoff,
+        )
+        .order_by(Game.game_date_utc.desc())
+        .all()
+    )
+
+
+def get_games_needing_sentiment(db: Session) -> list[Game]:
+    """Games where discovery succeeded, sentiment hasn't run, and the
+    thread is at least 3 hours old (comments have had time to accumulate)."""
+    cutoff = datetime.utcnow() - timedelta(hours=3)
+    return (
+        db.query(Game)
+        .filter(
+            Game.status.in_(["FINAL", "OFF"]),
+            Game.reddit_thread_id.isnot(None),
+            Game.reddit_fetched.is_(False),
+            Game.reddit_thread_created_at <= cutoff,
+        )
+        .order_by(Game.game_date_utc.desc())
+        .all()
+    )
+
+
+def mark_thread_discovered(
+    db: Session,
+    game_id: int,
+    thread_id: str,
+    thread_created_at: datetime,
+) -> bool:
+    """Record a discovered Reddit Post-Game Thread for a game."""
+    game = db.query(Game).filter(Game.game_id == game_id).first()
+    if not game:
+        return False
+    game.reddit_thread_id = thread_id
+    game.reddit_thread_created_at = thread_created_at
+    game.status_updated_at = datetime.utcnow()
+    db.commit()
+    return True
+
+
+def save_reddit_sentiment(db: Session, game_id: int, sentiment: dict) -> bool:
+    """Save Reddit sentiment analysis results, mark fetched, invalidate caches."""
+    game = db.query(Game).filter(Game.game_id == game_id).first()
+    if not game:
+        return False
+
+    now = datetime.utcnow()
+    game.reddit_sentiment = sentiment
+    game.reddit_fetched = True
+    game.reddit_analyzed_at = now
+    game.status_updated_at = now
+    db.commit()
+
+    cache.invalidate(f"game:{game_id}")
+    cache.invalidate_pattern("games:*")
     return True

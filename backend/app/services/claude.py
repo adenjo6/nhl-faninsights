@@ -80,7 +80,7 @@ Return a JSON object with these three keys. Keep the tone professional but energ
 
     try:
         message = client.messages.create(
-            model="claude-3-5-sonnet-20241022",
+            model="claude-sonnet-4-20250514",
             max_tokens=1500,
             temperature=0.7,
             messages=[{
@@ -131,7 +131,7 @@ def _format_goals_for_prompt(goals: list[Dict]) -> str:
     for i, goal in enumerate(goals, 1):
         assists_str = ", ".join([a for a in goal.get("assists", []) if a])
         assists_text = f" (Assists: {assists_str})" if assists_str else ""
-        strength = goal.get("strength", "ev").upper()
+        strength = (goal.get("strength") or "ev").upper()
         lines.append(
             f"{i}. Period {goal['period']}, {goal['time']} - "
             f"{goal['scorer']} ({goal['team']}) [{strength}]{assists_text}"

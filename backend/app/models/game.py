@@ -29,6 +29,12 @@ class Game(Base):
     recap_generated = Column(Boolean, default=False)
     summary_line = Column(String, nullable=True) # One-sentence lead (e.g., "Couture's PP tally was the difference")
 
+    # Reddit sentiment analysis
+    reddit_sentiment = Column(JSON, nullable=True)
+    reddit_thread_id = Column(String, nullable=True)
+    reddit_thread_created_at = Column(DateTime, nullable=True)
+    reddit_analyzed_at = Column(DateTime, nullable=True)
+
     # Processing state tracking
     basic_stats_fetched = Column(Boolean, default=False)
     reddit_fetched = Column(Boolean, default=False)
@@ -68,4 +74,6 @@ class Game(Base):
         Index("ix_games_home_away_date", "home_team", "away_team", "game_date_utc"),
         # Index for finding games that need processing
         Index("ix_games_status_updated", "status", "status_updated_at"),
+        # Covers the Reddit discovery predicate (status + thread_id NULL + game_date_utc)
+        Index("ix_games_reddit_discovery", "status", "reddit_thread_id", "game_date_utc"),
     )

@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from sqlalchemy import text
 from app.api.v1.routers import recap, games, comments, prospects, reddit, monitoring
@@ -8,6 +9,8 @@ from app.db.session import SessionLocal
 from app.config import settings
 from app.services.redis_cache import cache
 import logging
+import time
+import collections
 from datetime import datetime
 
 # Configure logging
@@ -16,6 +19,46 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Initialize Sentry (if DSN configured)
+if settings.SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        traces_sample_rate=0.1,
+        profiles_sample_rate=0.1,
+        environment=settings.ENVIRONMENT,
+    )
+    logger.info("✓ Sentry error tracking initialized")
+
+
+# Response time tracking
+response_time_stats = collections.defaultdict(lambda: {"count": 0, "total_ms": 0.0, "max_ms": 0.0})
+
+
+class ResponseTimeMiddleware(BaseHTTPMiddleware):
+    """Middleware to track and log response times."""
+
+    async def dispatch(self, request: Request, call_next):
+        start = time.perf_counter()
+        response = await call_next(request)
+        duration_ms = (time.perf_counter() - start) * 1000
+
+        # Add header
+        response.headers["X-Response-Time"] = f"{duration_ms:.1f}ms"
+
+        # Track stats per endpoint
+        path = request.url.path
+        stats = response_time_stats[path]
+        stats["count"] += 1
+        stats["total_ms"] += duration_ms
+        stats["max_ms"] = max(stats["max_ms"], duration_ms)
+
+        # Log slow requests
+        if duration_ms > 200:
+            logger.warning(f"Slow request: {request.method} {path} took {duration_ms:.0f}ms")
+
+        return response
 
 
 @asynccontextmanager
@@ -44,6 +87,9 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# Response time tracking middleware (must be added before CORS)
+app.add_middleware(ResponseTimeMiddleware)
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -54,7 +100,7 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(recap.router, prefix="/recap", tags=["recap"])
+app.include_router(recap.router, prefix="/api/recap", tags=["recap"])
 app.include_router(games.router, prefix="/api/games", tags=["games"])
 app.include_router(comments.router, prefix="/api/comments", tags=["comments"])
 app.include_router(prospects.router, prefix="/api/prospects", tags=["prospects"])
@@ -106,3 +152,18 @@ def health_check():
 def readiness_check():
     """Kubernetes-style readiness probe."""
     return {"ready": True}
+
+
+@app.get("/api/monitoring/response-times")
+def get_response_times():
+    """Per-endpoint response time statistics."""
+    endpoints = []
+    for path, stats in sorted(response_time_stats.items()):
+        if stats["count"] > 0:
+            endpoints.append({
+                "path": path,
+                "count": stats["count"],
+                "avg_ms": round(stats["total_ms"] / stats["count"], 1),
+                "max_ms": round(stats["max_ms"], 1),
+            })
+    return {"endpoints": endpoints}

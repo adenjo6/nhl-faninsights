@@ -53,6 +53,12 @@ services:
     restart: unless-stopped
     ports:
       - "8000:8000"
+    # Bind-mount source code for live edits in dev. Host changes show up
+    # immediately inside the container — no docker cp / rebuild needed.
+    # In prod (Railway), the root Dockerfile is used instead and bakes
+    # source into the image; this volume only applies to docker compose.
+    volumes:
+      - ./backend:/app
     environment:
       # Database
       DATABASE_URL: postgresql://nhluser:nhlpassword@postgres:5432/nhl
@@ -66,6 +72,15 @@ services:
       # API Keys (pass from host .env)
       YOUTUBE_API_KEY: ${YOUTUBE_API_KEY}
       CLAUDE_API_KEY: ${CLAUDE_API_KEY:-}
+
+      # Reddit (passed from host .env so the container picks up changes
+      # without needing a rebuild)
+      REDDIT_USE_ANON: ${REDDIT_USE_ANON:-false}
+      REDDIT_USER_AGENT: ${REDDIT_USER_AGENT:-}
+      REDDIT_CLIENT_ID: ${REDDIT_CLIENT_ID:-}
+      REDDIT_CLIENT_SECRET: ${REDDIT_CLIENT_SECRET:-}
+      REDDIT_USERNAME: ${REDDIT_USERNAME:-}
+      REDDIT_PASSWORD: ${REDDIT_PASSWORD:-}
 
       # App Settings
       SHARKS_TEAM_ID: SJS

@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     # External APIs
     YOUTUBE_API_KEY: str | None = None
     CLAUDE_API_KEY: str | None = None
+    CLAUDE_MODEL: str = "claude-sonnet-4-6"
 
     # Clerk Auth
     CLERK_SECRET_KEY: str | None = None
@@ -23,12 +24,28 @@ class Settings(BaseSettings):
     # Scheduler timezone
     TIMEZONE: str = "America/Los_Angeles"
 
+    # Sentry Error Tracking
+    SENTRY_DSN: str | None = None
+
     # Redis Cache
     REDIS_ENABLED: bool = False
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     REDIS_PASSWORD: str | None = None
+
+    # Reddit (PRAW script app — credentials are required to fetch real data;
+    # missing values cause discovery and analysis to no-op silently.)
+    REDDIT_CLIENT_ID: str | None = None
+    REDDIT_CLIENT_SECRET: str | None = None
+    REDDIT_USERNAME: str | None = None
+    REDDIT_PASSWORD: str | None = None
+    REDDIT_USER_AGENT: str = "python:nhl-fan-insights:1.0 (by /u/unknown)"
+    REDDIT_SUBREDDIT: str = "SanJoseSharks"
+    # Bridging mode: when True, use the public reddit.com/.json endpoints
+    # (no auth, ~10 req/min limit). When False (default), use PRAW with the
+    # credentials above. Flip back to False the day API access is approved.
+    REDDIT_USE_ANON: bool = False
 
     class Config:
         # env_file and encoding for reading .env automatically
