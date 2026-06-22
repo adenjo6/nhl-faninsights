@@ -21,7 +21,7 @@ export default function Home() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
     // Get recent completed games (default limit of 10 from backend)
-    fetch(`${apiUrl}/api/games/recent`)
+    fetch(`${apiUrl}/api/games/recent?limit=100`)
       .then(res => {
         if (!res.ok) {
           throw new Error(`Failed to fetch games: ${res.status}`);
