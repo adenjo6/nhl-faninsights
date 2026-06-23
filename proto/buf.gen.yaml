@@ -1,0 +1,10 @@
+version: v2
+plugins:
+  # Go message structs
+  - local: protoc-gen-go
+    out: ../prospect-service/internal/gen
+    opt: paths=source_relative
+  # Go gRPC server/client interfaces
+  - local: protoc-gen-go-grpc
+    out: ../prospect-service/internal/gen
+    opt: paths=source_relative
