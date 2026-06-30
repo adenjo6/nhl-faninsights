@@ -3,6 +3,7 @@ import type { AppProps } from "next/app";
 import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { initPostHog, capturePageview } from "@/lib/posthog";
+import Layout from "@/components/Layout";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
@@ -18,5 +19,9 @@ export default function App({ Component, pageProps }: AppProps) {
     };
   }, [router.events]);
 
-  return <Component {...pageProps} />;
+  return (
+    <Layout>
+      <Component {...pageProps} />
+    </Layout>
+  );
 }

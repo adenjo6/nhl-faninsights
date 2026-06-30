@@ -1,6 +1,4 @@
 import { useState, useEffect, useMemo } from "react";
-import Head from "next/head";
-import Link from "next/link";
 
 type SeasonStats = {
   season: string;
@@ -187,18 +185,6 @@ export default function Prospects() {
 
   const Shell = (children: React.ReactNode) => (
     <div className="pool">
-      <Head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin=""
-        />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap"
-          rel="stylesheet"
-        />
-      </Head>
       {children}
       <style jsx>{styles}</style>
     </div>
@@ -229,15 +215,8 @@ export default function Prospects() {
 
   return Shell(
     <main className="wrap">
-      <div className="topbar">
-        <Link href="/" className="back">
-          ← Games
-        </Link>
-        <span className="season">2025–26 season</span>
-      </div>
-
       <header className="masthead">
-        <p className="eyebrow">The Pipeline</p>
+        <p className="eyebrow">The Pipeline · 2025–26</p>
         <h1 className="wordmark">Prospect Pool</h1>
         <p className="lede">
           The Sharks&apos; future, tracked across the CHL and AHL with live
@@ -429,29 +408,13 @@ export default function Prospects() {
 const styles = `
   .pool {
     background: linear-gradient(180deg, #ECF4F3 0%, #fff 320px);
-    min-height: 100vh;
+    min-height: calc(100vh - 3.5rem);
     color: #0E2123;
     font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
   }
-  .wrap { max-width: 64rem; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; }
+  .wrap { max-width: 64rem; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
 
   .status { color: #5B7173; font-size: 0.95rem; padding-top: 2rem; }
-
-  .topbar {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-bottom: 2.2rem;
-  }
-  .back {
-    font-family: 'Saira Condensed', sans-serif; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8rem;
-    color: #006D75; text-decoration: none;
-  }
-  .back:hover { color: #003B41; }
-  .season {
-    font-family: 'Saira Condensed', sans-serif; font-weight: 500;
-    text-transform: uppercase; letter-spacing: 0.14em; font-size: 0.74rem;
-    color: #8AA1A0;
-  }
 
   .masthead { margin-bottom: 2rem; }
   .eyebrow {
