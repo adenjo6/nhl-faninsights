@@ -80,7 +80,7 @@ Return a JSON object with these three keys. Keep the tone professional but energ
 
     try:
         message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model=settings.CLAUDE_MODEL,
             max_tokens=1500,
             temperature=0.7,
             messages=[{
