@@ -18,9 +18,6 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Creates the `prospects` database for the Go prospect-service on first
-      # init. Only runs when the data dir is empty (fresh volume).
-      - ./db-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U nhluser -d nhl"]
       interval: 10s
@@ -98,6 +95,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      # Start after the prospect-service is serving, so the gRPC channel
+      # resolves on first use instead of wedging in DNS-failure backoff.
+      prospect-service:
+        condition: service_healthy
     networks:
       - nhl-network
 
@@ -117,6 +118,13 @@ services:
       DATABASE_URL: postgres://nhluser:nhlpassword@postgres:5432/prospects?sslmode=disable
       GRPC_ADDR: ":50051"
       HTTP_ADDR: ":8080"
+    healthcheck:
+      # busybox wget (alpine) against the Gin ops /health endpoint.
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     depends_on:
       postgres:
         condition: service_healthy

@@ -68,7 +68,12 @@ export default function Home() {
   return (
     <main className="max-w-6xl mx-auto p-6">
       <header className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 text-teal-600">🏒 NHL Fan Insights</h1>
+        <div className="flex items-center justify-between mb-2">
+          <h1 className="text-4xl font-bold text-teal-600">🏒 NHL Fan Insights</h1>
+          <Link href="/prospects" className="text-teal-600 font-medium hover:underline">
+            Prospects →
+          </Link>
+        </div>
         <p className="text-gray-600">San Jose Sharks Game Recaps with Video Highlights</p>
       </header>
 
