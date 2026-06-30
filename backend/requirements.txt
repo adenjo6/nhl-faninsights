@@ -32,7 +32,16 @@ psutil==6.1.1
 sentry-sdk[fastapi]==2.19.2
 praw==7.8.1
 
+# gRPC client for the prospect-service (Go) — runtime deps. protobuf is pinned
+# to match the committed stubs in app/grpc_gen/ (regenerate via `make proto-py`).
+grpcio==1.81.1
+protobuf==6.33.6
+
 # Testing dependencies
 pytest==8.3.4
 pytest-asyncio==0.24.0
 pytest-cov==6.0.0
+
+# Dev-only: regenerates the committed Python gRPC stubs. Not needed at runtime,
+# but kept here so a fresh `pip install -r requirements.txt` can run `make proto-py`.
+grpcio-tools==1.81.1

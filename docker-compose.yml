@@ -86,10 +86,47 @@ services:
       SHARKS_TEAM_ID: SJS
       TIMEZONE: America/Los_Angeles
       ENVIRONMENT: production
+
+      # prospect-service (Go gRPC microservice). When set, the prospects
+      # endpoints proxy to the service; unset would soft-fail to empty.
+      PROSPECT_SERVICE_ADDR: prospect-service:50051
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      # Start after the prospect-service is serving, so the gRPC channel
+      # resolves on first use instead of wedging in DNS-failure backoff.
+      prospect-service:
+        condition: service_healthy
+    networks:
+      - nhl-network
+
+  # Prospect Service (Go + gRPC)
+  prospect-service:
+    build:
+      context: ./prospect-service
+      dockerfile: Dockerfile
+    container_name: nhl-prospect-service
+    restart: unless-stopped
+    ports:
+      # gRPC data API (consumed by backend over nhl-network) + HTTP ops/health.
+      - "50051:50051"
+      - "8081:8080"
+    environment:
+      # Its own database in the shared postgres container (see db-init/).
+      DATABASE_URL: postgres://nhluser:nhlpassword@postgres:5432/prospects?sslmode=disable
+      GRPC_ADDR: ":50051"
+      HTTP_ADDR: ":8080"
+    healthcheck:
+      # busybox wget (alpine) against the Gin ops /health endpoint.
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    depends_on:
+      postgres:
         condition: service_healthy
     networks:
       - nhl-network

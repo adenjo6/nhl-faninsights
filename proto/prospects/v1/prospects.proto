@@ -1,0 +1,65 @@
+syntax = "proto3";
+
+package prospects.v1;
+
+// Go generated code lands in the prospect-service module.
+option go_package = "github.com/adenjo6/nhl-faninsights/prospect-service/internal/gen/prospects/v1;prospectsv1";
+
+// ProspectService is the internal, service-to-service read API for Sharks
+// prospect data. It is consumed over gRPC by the Python FastAPI gateway, which
+// caches results in Redis and re-exposes them to the browser as REST. Browsers
+// never speak gRPC directly.
+service ProspectService {
+  // ListProspects returns the curated Sharks prospect roster, optionally
+  // filtered by position and/or league. Both filters are optional; empty means
+  // "no filter".
+  rpc ListProspects(ListProspectsRequest) returns (ListProspectsResponse);
+
+  // GetProspect returns a single prospect by its internal id.
+  rpc GetProspect(GetProspectRequest) returns (GetProspectResponse);
+}
+
+// Prospect is one player in the Sharks system. For CHL/AHL players we ingest
+// live current-season stats from HockeyTech; for NCAA/European players we only
+// carry a link out to Elite Prospects (has_live_stats = false).
+message Prospect {
+  int64  id = 1;
+  string full_name = 2;
+  string position = 3;            // C, LW, RW, D, G
+  int32  draft_year = 4;
+  int32  draft_overall = 5;
+  string league = 6;             // OHL, WHL, QMJHL, AHL, NCAA, EUROPE
+  string team_name = 7;
+  string eliteprospects_url = 8;
+  bool   has_live_stats = 9;     // false -> NCAA/Euro link-out, no current_season
+  SeasonStats current_season = 10;
+}
+
+// SeasonStats is a single season's totals for a prospect.
+message SeasonStats {
+  string season = 1;             // "2025-26"
+  int32  games_played = 2;
+  int32  goals = 3;
+  int32  assists = 4;
+  int32  points = 5;
+  int32  plus_minus = 6;
+  int32  pim = 7;
+  string updated_at = 8;         // ISO8601 UTC, when these stats were fetched
+}
+
+message ListProspectsRequest {
+  string position = 1;           // optional filter
+  string league = 2;             // optional filter
+}
+
+message ListProspectsResponse {
+  repeated Prospect prospects = 1;
+}
+
+message GetProspectRequest {
+  int64 id = 1;
+}
+
+message GetProspectResponse {
+  Prospect prospect = 1;
+}
