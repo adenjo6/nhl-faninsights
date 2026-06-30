@@ -8,3 +8,7 @@ plugins:
   - local: protoc-gen-go-grpc
     out: ../prospect-service/internal/gen
     opt: paths=source_relative
+# NOTE: Python stubs for the FastAPI gateway are generated separately via
+# grpc_tools.protoc (see Makefile `proto-py`), NOT buf. grpc_tools pins the
+# generated code to the exact protobuf/grpcio runtime in backend/requirements.txt,
+# avoiding the version skew that buf's bleeding-edge remote plugins introduce.

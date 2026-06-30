@@ -1,105 +1,144 @@
+"""Prospects API.
+
+Thin REST facade over the prospect-service (Go gRPC microservice). This router
+calls the service via app.services.prospect_client, caches the mapped result in
+Redis, and re-exposes it as JSON. Browsers hit these endpoints; the gRPC hop is
+internal only.
+
+Replaces the previous hard-coded Elite Prospects link list: the curated roster
+and live CHL/AHL stats now live in the Go service's database.
 """
-Prospects API - Links to Elite Prospects.
-"""
-from fastapi import APIRouter, Query
-from pydantic import BaseModel
+import logging
 from typing import List, Optional
 
+from fastapi import APIRouter, HTTPException, Query
+from pydantic import BaseModel
+
+from app.services.prospect_client import (
+    ProspectNotFound,
+    ProspectServiceUnavailable,
+    prospect_client,
+)
+from app.services.redis_cache import cache
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Gateway cache TTL. The Go service refreshes stats once daily (6am PT cron), so
+# a few hours of staleness is fine and most reads hit Redis.
+PROSPECTS_CACHE_TTL = 6 * 60 * 60  # 6 hours
 
-class ProspectLink(BaseModel):
-    """Prospect information with Elite Prospects link."""
-    name: str
+
+class SeasonStats(BaseModel):
+    """A prospect's current-season totals (CHL/AHL via HockeyTech)."""
+    season: str
+    games_played: int
+    goals: int
+    assists: int
+    points: int
+    plus_minus: int
+    pim: int
+    updated_at: str  # ISO8601 UTC, when the Go ingest last fetched these
+
+
+class Prospect(BaseModel):
+    """One Sharks prospect. `current_season` is null for LINKOUT players
+    (NCAA/European) who carry only an Elite Prospects link, no live stats."""
+    id: int
+    full_name: str
     position: str
     draft_year: Optional[int] = None
-    elite_prospects_url: str
-    description: Optional[str] = None
+    draft_overall: Optional[int] = None
+    league: str
+    team_name: Optional[str] = None
+    elite_prospects_url: Optional[str] = None
+    has_live_stats: bool
+    current_season: Optional[SeasonStats] = None
 
 
-# San Jose Sharks top prospects (update this list as needed)
-SHARKS_PROSPECTS = [
-    ProspectLink(
-        name="Quentin Musty",
-        position="LW",
-        draft_year=2023,
-        elite_prospects_url="https://www.eliteprospects.com/player/586930/quentin-musty",
-        description="2023 1st round pick (26th overall). Dynamic winger with scoring ability."
-    ),
-    ProspectLink(
-        name="Kasper Halttunen",
-        position="RW",
-        draft_year=2022,
-        elite_prospects_url="https://www.eliteprospects.com/player/534856/kasper-halttunen",
-        description="2022 2nd round pick (52nd overall). Finnish sharpshooter."
-    ),
-    ProspectLink(
-        name="David Edstrom",
-        position="C",
-        draft_year=2023,
-        elite_prospects_url="https://www.eliteprospects.com/player/623249/david-edstrom",
-        description="2023 2nd round pick (32nd overall). Two-way center from Sweden."
-    ),
-    ProspectLink(
-        name="Filip Bystedt",
-        position="C",
-        draft_year=2022,
-        elite_prospects_url="https://www.eliteprospects.com/player/534859/filip-bystedt",
-        description="2022 2nd round pick (34th overall). Skilled Swedish center."
-    ),
-    ProspectLink(
-        name="Luca Cagnoni",
-        position="D",
-        draft_year=2023,
-        elite_prospects_url="https://www.eliteprospects.com/player/586924/luca-cagnoni",
-        description="2023 4th round pick (118th overall). Offensive defenseman."
-    ),
-    ProspectLink(
-        name="Brandon Svoboda",
-        position="C",
-        draft_year=2023,
-        elite_prospects_url="https://www.eliteprospects.com/player/586938/brandon-svoboda",
-        description="2023 5th round pick (139th overall). Two-way forward."
-    ),
-]
+def _to_model(p) -> Prospect:
+    """Map a prospects.v1.Prospect proto to the REST Pydantic model.
 
-
-@router.get("", response_model=List[ProspectLink])
-def get_prospects(
-    position: Optional[str] = Query(None, description="Filter by position (C, LW, RW, D, G)"),
-    draft_year: Optional[int] = Query(None, description="Filter by draft year")
-):
+    Proto int32 zero-values for draft_year/draft_overall mean "unset" (the
+    columns are nullable in the DB), so 0 is normalized back to None.
     """
-    Get San Jose Sharks prospects with Elite Prospects links.
-
-    - **position**: Filter by position (C, LW, RW, D, G)
-    - **draft_year**: Filter by draft year
-    """
-    prospects = SHARKS_PROSPECTS
-
-    if position:
-        prospects = [p for p in prospects if p.position == position.upper()]
-
-    if draft_year:
-        prospects = [p for p in prospects if p.draft_year == draft_year]
-
-    return prospects
-
-
-@router.get("/search", response_model=ProspectLink)
-def search_prospect(name: str = Query(..., description="Player name to search")):
-    """
-    Search for a specific prospect by name.
-    """
-    for prospect in SHARKS_PROSPECTS:
-        if name.lower() in prospect.name.lower():
-            return prospect
-
-    # If not found in our list, return a generic Elite Prospects search URL
-    return ProspectLink(
-        name=name,
-        position="Unknown",
-        elite_prospects_url=f"https://www.eliteprospects.com/search/player?q={name.replace(' ', '+')}",
-        description="Search results on Elite Prospects"
+    season = None
+    if p.HasField("current_season"):
+        s = p.current_season
+        season = SeasonStats(
+            season=s.season,
+            games_played=s.games_played,
+            goals=s.goals,
+            assists=s.assists,
+            points=s.points,
+            plus_minus=s.plus_minus,
+            pim=s.pim,
+            updated_at=s.updated_at,
+        )
+    return Prospect(
+        id=p.id,
+        full_name=p.full_name,
+        position=p.position,
+        draft_year=p.draft_year or None,
+        draft_overall=p.draft_overall or None,
+        league=p.league,
+        team_name=p.team_name or None,
+        elite_prospects_url=p.eliteprospects_url or None,
+        has_live_stats=p.has_live_stats,
+        current_season=season,
     )
+
+
+@router.get("", response_model=List[Prospect])
+def list_prospects(
+    position: Optional[str] = Query(None, description="Filter by position (C, LW, RW, D, G)"),
+    league: Optional[str] = Query(None, description="Filter by league (OHL, WHL, QMJHL, AHL, NCAA, EUROPE)"),
+):
+    """List Sharks prospects, optionally filtered by position and/or league.
+
+    If the prospect-service is unreachable, returns an empty list (soft-fail)
+    rather than erroring, consistent with the platform's optional-integration
+    pattern.
+    """
+    pos = position.upper() if position else None
+    lg = league.upper() if league else None
+    key = f"prospects:list:pos={pos or ''}:league={lg or ''}"
+
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
+    protos = prospect_client.list_prospects(pos, lg)
+    if protos is None:
+        # service unavailable — soft-fail, and don't cache the empty result so
+        # the next request retries once the service is back.
+        return []
+
+    result = [_to_model(p).model_dump() for p in protos]
+    cache.set(key, result, ttl=PROSPECTS_CACHE_TTL)
+    return result
+
+
+@router.get("/{prospect_id}", response_model=Prospect)
+def get_prospect(prospect_id: int):
+    """Fetch a single prospect by its internal id.
+
+    404 if no such prospect; 503 if the prospect-service is unavailable.
+    """
+    key = f"prospects:get:{prospect_id}"
+
+    cached = cache.get(key)
+    if cached is not None:
+        return cached
+
+    try:
+        proto = prospect_client.get_prospect(prospect_id)
+    except ProspectNotFound:
+        raise HTTPException(status_code=404, detail=f"Prospect {prospect_id} not found")
+    except ProspectServiceUnavailable:
+        raise HTTPException(status_code=503, detail="Prospect service unavailable")
+
+    result = _to_model(proto).model_dump()
+    cache.set(key, result, ttl=PROSPECTS_CACHE_TTL)
+    return result

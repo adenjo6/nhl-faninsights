@@ -24,6 +24,14 @@ class Settings(BaseSettings):
     # Scheduler timezone
     TIMEZONE: str = "America/Los_Angeles"
 
+    # prospect-service (Go gRPC microservice). Optional, house pattern: when
+    # unset the prospects endpoints soft-fail to empty rather than erroring.
+    # In docker compose this is set to "prospect-service:50051".
+    PROSPECT_SERVICE_ADDR: str | None = None
+    # Per-call deadline (seconds) for gRPC calls to the prospect-service, so a
+    # hung service can't tie up FastAPI's threadpool.
+    PROSPECT_SERVICE_TIMEOUT: float = 2.0
+
     # Sentry Error Tracking
     SENTRY_DSN: str | None = None
 

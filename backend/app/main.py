@@ -8,6 +8,7 @@ from app.jobs.scheduler import start_scheduler, shutdown_scheduler
 from app.db.session import SessionLocal
 from app.config import settings
 from app.services.redis_cache import cache
+from app.services.prospect_client import prospect_client
 import logging
 import time
 import collections
@@ -71,6 +72,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Sharks Fan Hub API...")
     start_scheduler()
     logger.info("✓ Scheduler started")
+    prospect_client.connect()
 
     yield
 
@@ -78,6 +80,7 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down Sharks Fan Hub API...")
     shutdown_scheduler()
     logger.info("✓ Scheduler stopped")
+    prospect_client.close()
 
 
 app = FastAPI(
