@@ -130,11 +130,42 @@ jobs:
         run: npm test --if-present
         continue-on-error: true
 
+  # Prospect Service CI: vet, build, test (Go)
+  prospect-service-ci:
+    name: Prospect Service CI
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./prospect-service
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go 1.25
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+          cache-dependency-path: prospect-service/go.sum
+
+      - name: Download modules
+        run: go mod download
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Build
+        run: go build ./...
+
+      - name: Test
+        run: go test ./... -race
+
   # Docker Build: Build and push Docker images
   docker-build:
     name: Build Docker Images
     runs-on: ubuntu-latest
-    needs: [backend-ci, frontend-ci]
+    needs: [backend-ci, frontend-ci, prospect-service-ci]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     permissions:

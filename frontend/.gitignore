@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but commit the template (no secrets — it's the onboarding contract).
+!.env.example
 
 # vercel
 .vercel
