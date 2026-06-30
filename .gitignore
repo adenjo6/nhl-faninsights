@@ -8,6 +8,11 @@ frontend/.env*
 backend/.env
 backend/.env.*
 
+# ...but DO commit the templates — they're the onboarding contract (no secrets).
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+
 # Python
 backend/venv/
 backend/**/__pycache__/

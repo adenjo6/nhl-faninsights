@@ -1,0 +1,13 @@
+# Keep the Go build context lean (the Dockerfile does `COPY . .`).
+.git
+.gitignore
+.dockerignore
+Dockerfile
+*.md
+.DS_Store
+
+# Local build output / tooling that the multi-stage build doesn't need.
+bin/
+*.out
+*.test
+sqlc.yaml
