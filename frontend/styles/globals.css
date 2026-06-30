@@ -1,2 +1,28 @@
 @import "tailwindcss/preflight";
 @import "tailwindcss/utilities";
+
+/* San Jose Sharks design tokens — shared across every page so the product
+   reads as one identity. Derived from the team's teal/orange palette. */
+:root {
+  --paper: #ffffff;
+  --mist: #f2f7f7;
+  --ice: #ecf4f3;
+  --teal: #006d75; /* brand primary */
+  --teal-bright: #00838f;
+  --deep: #003b41; /* display ink / dark surfaces */
+  --abyss: #052a2e; /* darkest — nav bar */
+  --orange: #ea7600; /* brand secondary, used sparingly */
+  --orange-ink: #c2540a;
+  --ink: #0e2123; /* primary text */
+  --slate: #5b7173; /* muted text / labels */
+  --line: #e6eeed; /* hairlines */
+
+  --font-display: "Saira Condensed", system-ui, -apple-system, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--paper);
+}
