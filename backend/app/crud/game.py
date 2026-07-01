@@ -23,8 +23,10 @@ def get_recent_games(db: Session, limit: int = 10, team: Optional[str] = None) -
     """Get recent completed games, optionally filtered by team."""
     query = db.query(Game).options(joinedload(Game.videos))
 
-    # Only show completed games (FINAL or OFF status)
-    query = query.filter(Game.status.in_(['FINAL', 'OFF']))
+    # Only show finished games. COMPLETE is the terminal status set once a game
+    # has been fully processed (videos + recap); without it, processed games
+    # would silently drop off the list.
+    query = query.filter(Game.status.in_(['FINAL', 'OFF', 'COMPLETE']))
 
     if team:
         query = query.filter(

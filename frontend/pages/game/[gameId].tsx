@@ -153,7 +153,8 @@ export default function GamePage() {
   }
 
   const s = scoreline(game);
-  const isFinal = game.status === "FINAL" || game.status === "OFF";
+  // FINAL/OFF are NHL states; COMPLETE is our terminal "fully processed" status.
+  const isFinal = ["FINAL", "OFF", "COMPLETE"].includes(game.status);
   const hasVideos = game.nhl_video_id || game.professor_hockey_video_id;
   const dateLabel = new Date(game.game_date_utc).toLocaleDateString("en-US", {
     weekday: "long",
