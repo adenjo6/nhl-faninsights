@@ -45,8 +45,11 @@ function gameDate(iso: string): string {
   });
 }
 
+// FINAL/OFF are NHL states; COMPLETE is our terminal "fully processed" status.
+const FINISHED = new Set(["FINAL", "OFF", "COMPLETE"]);
+
 function statusLabel(status: string): string {
-  return status === "FINAL" || status === "OFF" ? "Final" : status;
+  return FINISHED.has(status) ? "Final" : status;
 }
 
 export default function Home() {
@@ -102,7 +105,7 @@ export default function Home() {
 
   const gameCard = (game: GameSummary, featured = false) => {
     const s = scoreline(game);
-    const isFinal = game.status === "FINAL" || game.status === "OFF";
+    const isFinal = FINISHED.has(game.status);
     return (
       <Link
         key={game.game_id}
