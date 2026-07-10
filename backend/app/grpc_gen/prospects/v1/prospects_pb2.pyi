@@ -31,7 +31,7 @@ class Prospect(_message.Message):
     def __init__(self, id: _Optional[int] = ..., full_name: _Optional[str] = ..., position: _Optional[str] = ..., draft_year: _Optional[int] = ..., draft_overall: _Optional[int] = ..., league: _Optional[str] = ..., team_name: _Optional[str] = ..., eliteprospects_url: _Optional[str] = ..., has_live_stats: _Optional[bool] = ..., current_season: _Optional[_Union[SeasonStats, _Mapping]] = ...) -> None: ...
 
 class SeasonStats(_message.Message):
-    __slots__ = ("season", "games_played", "goals", "assists", "points", "plus_minus", "pim", "updated_at")
+    __slots__ = ("season", "games_played", "goals", "assists", "points", "plus_minus", "pim", "updated_at", "goalie")
     SEASON_FIELD_NUMBER: _ClassVar[int]
     GAMES_PLAYED_FIELD_NUMBER: _ClassVar[int]
     GOALS_FIELD_NUMBER: _ClassVar[int]
@@ -40,6 +40,7 @@ class SeasonStats(_message.Message):
     PLUS_MINUS_FIELD_NUMBER: _ClassVar[int]
     PIM_FIELD_NUMBER: _ClassVar[int]
     UPDATED_AT_FIELD_NUMBER: _ClassVar[int]
+    GOALIE_FIELD_NUMBER: _ClassVar[int]
     season: str
     games_played: int
     goals: int
@@ -48,7 +49,28 @@ class SeasonStats(_message.Message):
     plus_minus: int
     pim: int
     updated_at: str
-    def __init__(self, season: _Optional[str] = ..., games_played: _Optional[int] = ..., goals: _Optional[int] = ..., assists: _Optional[int] = ..., points: _Optional[int] = ..., plus_minus: _Optional[int] = ..., pim: _Optional[int] = ..., updated_at: _Optional[str] = ...) -> None: ...
+    goalie: GoalieStats
+    def __init__(self, season: _Optional[str] = ..., games_played: _Optional[int] = ..., goals: _Optional[int] = ..., assists: _Optional[int] = ..., points: _Optional[int] = ..., plus_minus: _Optional[int] = ..., pim: _Optional[int] = ..., updated_at: _Optional[str] = ..., goalie: _Optional[_Union[GoalieStats, _Mapping]] = ...) -> None: ...
+
+class GoalieStats(_message.Message):
+    __slots__ = ("wins", "losses", "ot_losses", "shutouts", "saves", "shots", "gaa", "sv_pct")
+    WINS_FIELD_NUMBER: _ClassVar[int]
+    LOSSES_FIELD_NUMBER: _ClassVar[int]
+    OT_LOSSES_FIELD_NUMBER: _ClassVar[int]
+    SHUTOUTS_FIELD_NUMBER: _ClassVar[int]
+    SAVES_FIELD_NUMBER: _ClassVar[int]
+    SHOTS_FIELD_NUMBER: _ClassVar[int]
+    GAA_FIELD_NUMBER: _ClassVar[int]
+    SV_PCT_FIELD_NUMBER: _ClassVar[int]
+    wins: int
+    losses: int
+    ot_losses: int
+    shutouts: int
+    saves: int
+    shots: int
+    gaa: float
+    sv_pct: float
+    def __init__(self, wins: _Optional[int] = ..., losses: _Optional[int] = ..., ot_losses: _Optional[int] = ..., shutouts: _Optional[int] = ..., saves: _Optional[int] = ..., shots: _Optional[int] = ..., gaa: _Optional[float] = ..., sv_pct: _Optional[float] = ...) -> None: ...
 
 class ListProspectsRequest(_message.Message):
     __slots__ = ("position", "league")

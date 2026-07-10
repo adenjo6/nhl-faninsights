@@ -70,6 +70,9 @@ type rowView struct {
 	TeamName          *string
 	Season            *string
 	GP, G, A, P, PM, PIM *int32
+	Wins, Losses, OTL    *int32
+	SO, Saves, Shots     *int32
+	GAA, SvPct           pgtype.Numeric
 	FetchedAt         pgtype.Timestamptz
 }
 
@@ -79,7 +82,11 @@ func fromListRow(r db.ListProspectsRow) rowView {
 		DraftYear: r.DraftYear, DraftOverall: r.DraftOverall,
 		EliteprospectsUrl: r.EliteprospectsUrl, TeamName: r.TeamName,
 		Season: r.Season, GP: r.GamesPlayed, G: r.Goals, A: r.Assists, P: r.Points,
-		PM: r.PlusMinus, PIM: r.Pim, FetchedAt: r.FetchedAt,
+		PM: r.PlusMinus, PIM: r.Pim,
+		Wins: r.Wins, Losses: r.Losses, OTL: r.OtLosses,
+		SO: r.Shutouts, Saves: r.Saves, Shots: r.Shots,
+		GAA: r.Gaa, SvPct: r.SvPct,
+		FetchedAt: r.FetchedAt,
 	}
 }
 
@@ -89,7 +96,11 @@ func fromGetRow(r db.GetProspectRow) rowView {
 		DraftYear: r.DraftYear, DraftOverall: r.DraftOverall,
 		EliteprospectsUrl: r.EliteprospectsUrl, TeamName: r.TeamName,
 		Season: r.Season, GP: r.GamesPlayed, G: r.Goals, A: r.Assists, P: r.Points,
-		PM: r.PlusMinus, PIM: r.Pim, FetchedAt: r.FetchedAt,
+		PM: r.PlusMinus, PIM: r.Pim,
+		Wins: r.Wins, Losses: r.Losses, OTL: r.OtLosses,
+		SO: r.Shutouts, Saves: r.Saves, Shots: r.Shots,
+		GAA: r.Gaa, SvPct: r.SvPct,
+		FetchedAt: r.FetchedAt,
 	}
 }
 
@@ -116,8 +127,33 @@ func toProto(v rowView) *prospectsv1.Prospect {
 			Pim:         derefI32(v.PIM),
 			UpdatedAt:   tsToString(v.FetchedAt),
 		}
+		// A goalie row carries the goalie columns; wins is NOT NULL in every
+		// goalie upsert, so its presence identifies the line type.
+		if v.Wins != nil {
+			p.CurrentSeason.Goalie = &prospectsv1.GoalieStats{
+				Wins:     derefI32(v.Wins),
+				Losses:   derefI32(v.Losses),
+				OtLosses: derefI32(v.OTL),
+				Shutouts: derefI32(v.SO),
+				Saves:    derefI32(v.Saves),
+				Shots:    derefI32(v.Shots),
+				Gaa:      numericToF64(v.GAA),
+				SvPct:    numericToF64(v.SvPct),
+			}
+		}
 	}
 	return p
+}
+
+func numericToF64(n pgtype.Numeric) float64 {
+	if !n.Valid {
+		return 0
+	}
+	f, err := n.Float64Value()
+	if err != nil {
+		return 0
+	}
+	return f.Float64
 }
 
 func derefI32(p *int32) int32 {

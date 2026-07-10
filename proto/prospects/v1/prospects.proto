@@ -35,7 +35,9 @@ message Prospect {
   SeasonStats current_season = 10;
 }
 
-// SeasonStats is a single season's totals for a prospect.
+// SeasonStats is a single season's totals for a prospect. For goalies the
+// skater counters stay 0 and `goalie` is set; its presence is the signal that
+// this is a goalie line.
 message SeasonStats {
   string season = 1;             // "2025-26"
   int32  games_played = 2;
@@ -45,6 +47,20 @@ message SeasonStats {
   int32  plus_minus = 6;
   int32  pim = 7;
   string updated_at = 8;         // ISO8601 UTC, when these stats were fetched
+  GoalieStats goalie = 9;        // set only for goalies
+}
+
+// GoalieStats is a goalie's season line. GAA/SV% are the league feed's own
+// computed values (not rederived from the counters).
+message GoalieStats {
+  int32  wins = 1;
+  int32  losses = 2;
+  int32  ot_losses = 3;
+  int32  shutouts = 4;
+  int32  saves = 5;
+  int32  shots = 6;
+  double gaa = 7;                // e.g. 2.51
+  double sv_pct = 8;             // e.g. 0.919
 }
 
 message ListProspectsRequest {

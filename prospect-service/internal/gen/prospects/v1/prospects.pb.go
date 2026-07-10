@@ -140,7 +140,9 @@ func (x *Prospect) GetCurrentSeason() *SeasonStats {
 	return nil
 }
 
-// SeasonStats is a single season's totals for a prospect.
+// SeasonStats is a single season's totals for a prospect. For goalies the
+// skater counters stay 0 and `goalie` is set; its presence is the signal that
+// this is a goalie line.
 type SeasonStats struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Season        string                 `protobuf:"bytes,1,opt,name=season,proto3" json:"season,omitempty"` // "2025-26"
@@ -151,6 +153,7 @@ type SeasonStats struct {
 	PlusMinus     int32                  `protobuf:"varint,6,opt,name=plus_minus,json=plusMinus,proto3" json:"plus_minus,omitempty"`
 	Pim           int32                  `protobuf:"varint,7,opt,name=pim,proto3" json:"pim,omitempty"`
 	UpdatedAt     string                 `protobuf:"bytes,8,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"` // ISO8601 UTC, when these stats were fetched
+	Goalie        *GoalieStats           `protobuf:"bytes,9,opt,name=goalie,proto3" json:"goalie,omitempty"`                        // set only for goalies
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -241,6 +244,115 @@ func (x *SeasonStats) GetUpdatedAt() string {
 	return ""
 }
 
+func (x *SeasonStats) GetGoalie() *GoalieStats {
+	if x != nil {
+		return x.Goalie
+	}
+	return nil
+}
+
+// GoalieStats is a goalie's season line. GAA/SV% are the league feed's own
+// computed values (not rederived from the counters).
+type GoalieStats struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Wins          int32                  `protobuf:"varint,1,opt,name=wins,proto3" json:"wins,omitempty"`
+	Losses        int32                  `protobuf:"varint,2,opt,name=losses,proto3" json:"losses,omitempty"`
+	OtLosses      int32                  `protobuf:"varint,3,opt,name=ot_losses,json=otLosses,proto3" json:"ot_losses,omitempty"`
+	Shutouts      int32                  `protobuf:"varint,4,opt,name=shutouts,proto3" json:"shutouts,omitempty"`
+	Saves         int32                  `protobuf:"varint,5,opt,name=saves,proto3" json:"saves,omitempty"`
+	Shots         int32                  `protobuf:"varint,6,opt,name=shots,proto3" json:"shots,omitempty"`
+	Gaa           float64                `protobuf:"fixed64,7,opt,name=gaa,proto3" json:"gaa,omitempty"`                  // e.g. 2.51
+	SvPct         float64                `protobuf:"fixed64,8,opt,name=sv_pct,json=svPct,proto3" json:"sv_pct,omitempty"` // e.g. 0.919
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GoalieStats) Reset() {
+	*x = GoalieStats{}
+	mi := &file_prospects_v1_prospects_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GoalieStats) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GoalieStats) ProtoMessage() {}
+
+func (x *GoalieStats) ProtoReflect() protoreflect.Message {
+	mi := &file_prospects_v1_prospects_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GoalieStats.ProtoReflect.Descriptor instead.
+func (*GoalieStats) Descriptor() ([]byte, []int) {
+	return file_prospects_v1_prospects_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GoalieStats) GetWins() int32 {
+	if x != nil {
+		return x.Wins
+	}
+	return 0
+}
+
+func (x *GoalieStats) GetLosses() int32 {
+	if x != nil {
+		return x.Losses
+	}
+	return 0
+}
+
+func (x *GoalieStats) GetOtLosses() int32 {
+	if x != nil {
+		return x.OtLosses
+	}
+	return 0
+}
+
+func (x *GoalieStats) GetShutouts() int32 {
+	if x != nil {
+		return x.Shutouts
+	}
+	return 0
+}
+
+func (x *GoalieStats) GetSaves() int32 {
+	if x != nil {
+		return x.Saves
+	}
+	return 0
+}
+
+func (x *GoalieStats) GetShots() int32 {
+	if x != nil {
+		return x.Shots
+	}
+	return 0
+}
+
+func (x *GoalieStats) GetGaa() float64 {
+	if x != nil {
+		return x.Gaa
+	}
+	return 0
+}
+
+func (x *GoalieStats) GetSvPct() float64 {
+	if x != nil {
+		return x.SvPct
+	}
+	return 0
+}
+
 type ListProspectsRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Position      string                 `protobuf:"bytes,1,opt,name=position,proto3" json:"position,omitempty"` // optional filter
@@ -251,7 +363,7 @@ type ListProspectsRequest struct {
 
 func (x *ListProspectsRequest) Reset() {
 	*x = ListProspectsRequest{}
-	mi := &file_prospects_v1_prospects_proto_msgTypes[2]
+	mi := &file_prospects_v1_prospects_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -263,7 +375,7 @@ func (x *ListProspectsRequest) String() string {
 func (*ListProspectsRequest) ProtoMessage() {}
 
 func (x *ListProspectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prospects_v1_prospects_proto_msgTypes[2]
+	mi := &file_prospects_v1_prospects_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -276,7 +388,7 @@ func (x *ListProspectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProspectsRequest.ProtoReflect.Descriptor instead.
 func (*ListProspectsRequest) Descriptor() ([]byte, []int) {
-	return file_prospects_v1_prospects_proto_rawDescGZIP(), []int{2}
+	return file_prospects_v1_prospects_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ListProspectsRequest) GetPosition() string {
@@ -302,7 +414,7 @@ type ListProspectsResponse struct {
 
 func (x *ListProspectsResponse) Reset() {
 	*x = ListProspectsResponse{}
-	mi := &file_prospects_v1_prospects_proto_msgTypes[3]
+	mi := &file_prospects_v1_prospects_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -314,7 +426,7 @@ func (x *ListProspectsResponse) String() string {
 func (*ListProspectsResponse) ProtoMessage() {}
 
 func (x *ListProspectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prospects_v1_prospects_proto_msgTypes[3]
+	mi := &file_prospects_v1_prospects_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -327,7 +439,7 @@ func (x *ListProspectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListProspectsResponse.ProtoReflect.Descriptor instead.
 func (*ListProspectsResponse) Descriptor() ([]byte, []int) {
-	return file_prospects_v1_prospects_proto_rawDescGZIP(), []int{3}
+	return file_prospects_v1_prospects_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *ListProspectsResponse) GetProspects() []*Prospect {
@@ -346,7 +458,7 @@ type GetProspectRequest struct {
 
 func (x *GetProspectRequest) Reset() {
 	*x = GetProspectRequest{}
-	mi := &file_prospects_v1_prospects_proto_msgTypes[4]
+	mi := &file_prospects_v1_prospects_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -358,7 +470,7 @@ func (x *GetProspectRequest) String() string {
 func (*GetProspectRequest) ProtoMessage() {}
 
 func (x *GetProspectRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_prospects_v1_prospects_proto_msgTypes[4]
+	mi := &file_prospects_v1_prospects_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -371,7 +483,7 @@ func (x *GetProspectRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProspectRequest.ProtoReflect.Descriptor instead.
 func (*GetProspectRequest) Descriptor() ([]byte, []int) {
-	return file_prospects_v1_prospects_proto_rawDescGZIP(), []int{4}
+	return file_prospects_v1_prospects_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetProspectRequest) GetId() int64 {
@@ -390,7 +502,7 @@ type GetProspectResponse struct {
 
 func (x *GetProspectResponse) Reset() {
 	*x = GetProspectResponse{}
-	mi := &file_prospects_v1_prospects_proto_msgTypes[5]
+	mi := &file_prospects_v1_prospects_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -402,7 +514,7 @@ func (x *GetProspectResponse) String() string {
 func (*GetProspectResponse) ProtoMessage() {}
 
 func (x *GetProspectResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_prospects_v1_prospects_proto_msgTypes[5]
+	mi := &file_prospects_v1_prospects_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -415,7 +527,7 @@ func (x *GetProspectResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetProspectResponse.ProtoReflect.Descriptor instead.
 func (*GetProspectResponse) Descriptor() ([]byte, []int) {
-	return file_prospects_v1_prospects_proto_rawDescGZIP(), []int{5}
+	return file_prospects_v1_prospects_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetProspectResponse) GetProspect() *Prospect {
@@ -442,7 +554,7 @@ const file_prospects_v1_prospects_proto_rawDesc = "" +
 	"\x12eliteprospects_url\x18\b \x01(\tR\x11eliteprospectsUrl\x12$\n" +
 	"\x0ehas_live_stats\x18\t \x01(\bR\fhasLiveStats\x12@\n" +
 	"\x0ecurrent_season\x18\n" +
-	" \x01(\v2\x19.prospects.v1.SeasonStatsR\rcurrentSeason\"\xe0\x01\n" +
+	" \x01(\v2\x19.prospects.v1.SeasonStatsR\rcurrentSeason\"\x93\x02\n" +
 	"\vSeasonStats\x12\x16\n" +
 	"\x06season\x18\x01 \x01(\tR\x06season\x12!\n" +
 	"\fgames_played\x18\x02 \x01(\x05R\vgamesPlayed\x12\x14\n" +
@@ -453,7 +565,17 @@ const file_prospects_v1_prospects_proto_rawDesc = "" +
 	"plus_minus\x18\x06 \x01(\x05R\tplusMinus\x12\x10\n" +
 	"\x03pim\x18\a \x01(\x05R\x03pim\x12\x1d\n" +
 	"\n" +
-	"updated_at\x18\b \x01(\tR\tupdatedAt\"J\n" +
+	"updated_at\x18\b \x01(\tR\tupdatedAt\x121\n" +
+	"\x06goalie\x18\t \x01(\v2\x19.prospects.v1.GoalieStatsR\x06goalie\"\xc7\x01\n" +
+	"\vGoalieStats\x12\x12\n" +
+	"\x04wins\x18\x01 \x01(\x05R\x04wins\x12\x16\n" +
+	"\x06losses\x18\x02 \x01(\x05R\x06losses\x12\x1b\n" +
+	"\tot_losses\x18\x03 \x01(\x05R\botLosses\x12\x1a\n" +
+	"\bshutouts\x18\x04 \x01(\x05R\bshutouts\x12\x14\n" +
+	"\x05saves\x18\x05 \x01(\x05R\x05saves\x12\x14\n" +
+	"\x05shots\x18\x06 \x01(\x05R\x05shots\x12\x10\n" +
+	"\x03gaa\x18\a \x01(\x01R\x03gaa\x12\x15\n" +
+	"\x06sv_pct\x18\b \x01(\x01R\x05svPct\"J\n" +
 	"\x14ListProspectsRequest\x12\x1a\n" +
 	"\bposition\x18\x01 \x01(\tR\bposition\x12\x16\n" +
 	"\x06league\x18\x02 \x01(\tR\x06league\"M\n" +
@@ -479,28 +601,30 @@ func file_prospects_v1_prospects_proto_rawDescGZIP() []byte {
 	return file_prospects_v1_prospects_proto_rawDescData
 }
 
-var file_prospects_v1_prospects_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_prospects_v1_prospects_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_prospects_v1_prospects_proto_goTypes = []any{
 	(*Prospect)(nil),              // 0: prospects.v1.Prospect
 	(*SeasonStats)(nil),           // 1: prospects.v1.SeasonStats
-	(*ListProspectsRequest)(nil),  // 2: prospects.v1.ListProspectsRequest
-	(*ListProspectsResponse)(nil), // 3: prospects.v1.ListProspectsResponse
-	(*GetProspectRequest)(nil),    // 4: prospects.v1.GetProspectRequest
-	(*GetProspectResponse)(nil),   // 5: prospects.v1.GetProspectResponse
+	(*GoalieStats)(nil),           // 2: prospects.v1.GoalieStats
+	(*ListProspectsRequest)(nil),  // 3: prospects.v1.ListProspectsRequest
+	(*ListProspectsResponse)(nil), // 4: prospects.v1.ListProspectsResponse
+	(*GetProspectRequest)(nil),    // 5: prospects.v1.GetProspectRequest
+	(*GetProspectResponse)(nil),   // 6: prospects.v1.GetProspectResponse
 }
 var file_prospects_v1_prospects_proto_depIdxs = []int32{
 	1, // 0: prospects.v1.Prospect.current_season:type_name -> prospects.v1.SeasonStats
-	0, // 1: prospects.v1.ListProspectsResponse.prospects:type_name -> prospects.v1.Prospect
-	0, // 2: prospects.v1.GetProspectResponse.prospect:type_name -> prospects.v1.Prospect
-	2, // 3: prospects.v1.ProspectService.ListProspects:input_type -> prospects.v1.ListProspectsRequest
-	4, // 4: prospects.v1.ProspectService.GetProspect:input_type -> prospects.v1.GetProspectRequest
-	3, // 5: prospects.v1.ProspectService.ListProspects:output_type -> prospects.v1.ListProspectsResponse
-	5, // 6: prospects.v1.ProspectService.GetProspect:output_type -> prospects.v1.GetProspectResponse
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	2, // 1: prospects.v1.SeasonStats.goalie:type_name -> prospects.v1.GoalieStats
+	0, // 2: prospects.v1.ListProspectsResponse.prospects:type_name -> prospects.v1.Prospect
+	0, // 3: prospects.v1.GetProspectResponse.prospect:type_name -> prospects.v1.Prospect
+	3, // 4: prospects.v1.ProspectService.ListProspects:input_type -> prospects.v1.ListProspectsRequest
+	5, // 5: prospects.v1.ProspectService.GetProspect:input_type -> prospects.v1.GetProspectRequest
+	4, // 6: prospects.v1.ProspectService.ListProspects:output_type -> prospects.v1.ListProspectsResponse
+	6, // 7: prospects.v1.ProspectService.GetProspect:output_type -> prospects.v1.GetProspectResponse
+	6, // [6:8] is the sub-list for method output_type
+	4, // [4:6] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_prospects_v1_prospects_proto_init() }
@@ -514,7 +638,7 @@ func file_prospects_v1_prospects_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_prospects_v1_prospects_proto_rawDesc), len(file_prospects_v1_prospects_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

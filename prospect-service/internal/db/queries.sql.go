@@ -29,6 +29,14 @@ SELECT
     s.points,
     s.plus_minus,
     s.pim,
+    s.wins,
+    s.losses,
+    s.ot_losses,
+    s.shutouts,
+    s.saves,
+    s.shots,
+    s.gaa,
+    s.sv_pct,
     s.fetched_at
 FROM prospects p
 LEFT JOIN prospect_season_stats s
@@ -58,6 +66,14 @@ type GetProspectRow struct {
 	Points            *int32             `json:"points"`
 	PlusMinus         *int32             `json:"plus_minus"`
 	Pim               *int32             `json:"pim"`
+	Wins              *int32             `json:"wins"`
+	Losses            *int32             `json:"losses"`
+	OtLosses          *int32             `json:"ot_losses"`
+	Shutouts          *int32             `json:"shutouts"`
+	Saves             *int32             `json:"saves"`
+	Shots             *int32             `json:"shots"`
+	Gaa               pgtype.Numeric     `json:"gaa"`
+	SvPct             pgtype.Numeric     `json:"sv_pct"`
 	FetchedAt         pgtype.Timestamptz `json:"fetched_at"`
 }
 
@@ -81,13 +97,21 @@ func (q *Queries) GetProspect(ctx context.Context, arg GetProspectParams) (GetPr
 		&i.Points,
 		&i.PlusMinus,
 		&i.Pim,
+		&i.Wins,
+		&i.Losses,
+		&i.OtLosses,
+		&i.Shutouts,
+		&i.Saves,
+		&i.Shots,
+		&i.Gaa,
+		&i.SvPct,
 		&i.FetchedAt,
 	)
 	return i, err
 }
 
 const listIngestableProspects = `-- name: ListIngestableProspects :many
-SELECT id, full_name, hockeytech_client_code, hockeytech_player_id
+SELECT id, full_name, position, hockeytech_client_code, hockeytech_player_id
 FROM prospects
 WHERE active = true AND source = 'HOCKEYTECH'
 ORDER BY id
@@ -96,11 +120,14 @@ ORDER BY id
 type ListIngestableProspectsRow struct {
 	ID                   int64   `json:"id"`
 	FullName             string  `json:"full_name"`
+	Position             string  `json:"position"`
 	HockeytechClientCode *string `json:"hockeytech_client_code"`
 	HockeytechPlayerID   *string `json:"hockeytech_player_id"`
 }
 
-// HockeyTech-sourced active prospects the cron should refresh.
+// HockeyTech-sourced active prospects the cron should refresh. position
+// decides which bulk feed a prospect is matched against (topscorers vs
+// topgoalies).
 func (q *Queries) ListIngestableProspects(ctx context.Context) ([]ListIngestableProspectsRow, error) {
 	rows, err := q.db.Query(ctx, listIngestableProspects)
 	if err != nil {
@@ -113,6 +140,7 @@ func (q *Queries) ListIngestableProspects(ctx context.Context) ([]ListIngestable
 		if err := rows.Scan(
 			&i.ID,
 			&i.FullName,
+			&i.Position,
 			&i.HockeytechClientCode,
 			&i.HockeytechPlayerID,
 		); err != nil {
@@ -144,6 +172,14 @@ SELECT
     s.points,
     s.plus_minus,
     s.pim,
+    s.wins,
+    s.losses,
+    s.ot_losses,
+    s.shutouts,
+    s.saves,
+    s.shots,
+    s.gaa,
+    s.sv_pct,
     s.fetched_at
 FROM prospects p
 LEFT JOIN prospect_season_stats s
@@ -177,6 +213,14 @@ type ListProspectsRow struct {
 	Points            *int32             `json:"points"`
 	PlusMinus         *int32             `json:"plus_minus"`
 	Pim               *int32             `json:"pim"`
+	Wins              *int32             `json:"wins"`
+	Losses            *int32             `json:"losses"`
+	OtLosses          *int32             `json:"ot_losses"`
+	Shutouts          *int32             `json:"shutouts"`
+	Saves             *int32             `json:"saves"`
+	Shots             *int32             `json:"shots"`
+	Gaa               pgtype.Numeric     `json:"gaa"`
+	SvPct             pgtype.Numeric     `json:"sv_pct"`
 	FetchedAt         pgtype.Timestamptz `json:"fetched_at"`
 }
 
@@ -208,6 +252,14 @@ func (q *Queries) ListProspects(ctx context.Context, arg ListProspectsParams) ([
 			&i.Points,
 			&i.PlusMinus,
 			&i.Pim,
+			&i.Wins,
+			&i.Losses,
+			&i.OtLosses,
+			&i.Shutouts,
+			&i.Saves,
+			&i.Shots,
+			&i.Gaa,
+			&i.SvPct,
 			&i.FetchedAt,
 		); err != nil {
 			return nil, err
@@ -218,6 +270,64 @@ func (q *Queries) ListProspects(ctx context.Context, arg ListProspectsParams) ([
 		return nil, err
 	}
 	return items, nil
+}
+
+const upsertGoalieSeasonStats = `-- name: UpsertGoalieSeasonStats :exec
+INSERT INTO prospect_season_stats (
+    prospect_id, season, team_name, games_played,
+    wins, losses, ot_losses, shutouts, saves, shots, gaa, sv_pct, fetched_at
+) VALUES (
+    $1, $2, $3, $4,
+    $5, $6, $7, $8,
+    $9, $10, $11, $12, now()
+)
+ON CONFLICT (prospect_id, season) DO UPDATE SET
+    team_name    = EXCLUDED.team_name,
+    games_played = EXCLUDED.games_played,
+    wins         = EXCLUDED.wins,
+    losses       = EXCLUDED.losses,
+    ot_losses    = EXCLUDED.ot_losses,
+    shutouts     = EXCLUDED.shutouts,
+    saves        = EXCLUDED.saves,
+    shots        = EXCLUDED.shots,
+    gaa          = EXCLUDED.gaa,
+    sv_pct       = EXCLUDED.sv_pct,
+    fetched_at   = now()
+`
+
+type UpsertGoalieSeasonStatsParams struct {
+	ProspectID  int64          `json:"prospect_id"`
+	Season      string         `json:"season"`
+	TeamName    *string        `json:"team_name"`
+	GamesPlayed int32          `json:"games_played"`
+	Wins        *int32         `json:"wins"`
+	Losses      *int32         `json:"losses"`
+	OtLosses    *int32         `json:"ot_losses"`
+	Shutouts    *int32         `json:"shutouts"`
+	Saves       *int32         `json:"saves"`
+	Shots       *int32         `json:"shots"`
+	Gaa         pgtype.Numeric `json:"gaa"`
+	SvPct       pgtype.Numeric `json:"sv_pct"`
+}
+
+// Goalie counterpart of UpsertSeasonStats; skater counters are left at their
+// defaults (0) and untouched on conflict.
+func (q *Queries) UpsertGoalieSeasonStats(ctx context.Context, arg UpsertGoalieSeasonStatsParams) error {
+	_, err := q.db.Exec(ctx, upsertGoalieSeasonStats,
+		arg.ProspectID,
+		arg.Season,
+		arg.TeamName,
+		arg.GamesPlayed,
+		arg.Wins,
+		arg.Losses,
+		arg.OtLosses,
+		arg.Shutouts,
+		arg.Saves,
+		arg.Shots,
+		arg.Gaa,
+		arg.SvPct,
+	)
+	return err
 }
 
 const upsertSeasonStats = `-- name: UpsertSeasonStats :exec
