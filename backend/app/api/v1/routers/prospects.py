@@ -29,18 +29,25 @@ router = APIRouter()
 # a few hours of staleness is fine and most reads hit Redis.
 PROSPECTS_CACHE_TTL = 6 * 60 * 60  # 6 hours
 
+# Bump when the payload shape or the underlying prospect data changes in a
+# deploy (e.g. a data migration): old cache entries otherwise keep serving
+# stale rows for up to the TTL, since nothing else invalidates them.
+PROSPECTS_CACHE_VERSION = "v2"
+
 
 class GoalieStats(BaseModel):
     """A goalie's season line. GAA/SV% are the league feed's own computed
-    values (e.g. 2.51 / 0.919), not rederived from the counters."""
+    values (e.g. 2.51 / 0.919), not rederived from the counters. ot_losses,
+    gaa, and sv_pct are None when the source doesn't report them — the
+    frontend renders unknown as an em dash, never as 0."""
     wins: int
     losses: int
-    ot_losses: int
+    ot_losses: Optional[int] = None
     shutouts: int
     saves: int
     shots: int
-    gaa: float
-    sv_pct: float
+    gaa: Optional[float] = None
+    sv_pct: Optional[float] = None
 
 
 class SeasonStats(BaseModel):
@@ -87,12 +94,12 @@ def _to_model(p) -> Prospect:
             goalie = GoalieStats(
                 wins=g.wins,
                 losses=g.losses,
-                ot_losses=g.ot_losses,
+                ot_losses=g.ot_losses if g.HasField("ot_losses") else None,
                 shutouts=g.shutouts,
                 saves=g.saves,
                 shots=g.shots,
-                gaa=g.gaa,
-                sv_pct=g.sv_pct,
+                gaa=g.gaa if g.HasField("gaa") else None,
+                sv_pct=g.sv_pct if g.HasField("sv_pct") else None,
             )
         season = SeasonStats(
             season=s.season,
@@ -132,7 +139,7 @@ def list_prospects(
     """
     pos = position.upper() if position else None
     lg = league.upper() if league else None
-    key = f"prospects:list:pos={pos or ''}:league={lg or ''}"
+    key = f"prospects:{PROSPECTS_CACHE_VERSION}:list:pos={pos or ''}:league={lg or ''}"
 
     cached = cache.get(key)
     if cached is not None:
@@ -155,7 +162,7 @@ def get_prospect(prospect_id: int):
 
     404 if no such prospect; 503 if the prospect-service is unavailable.
     """
-    key = f"prospects:get:{prospect_id}"
+    key = f"prospects:{PROSPECTS_CACHE_VERSION}:get:{prospect_id}"
 
     cached = cache.get(key)
     if cached is not None:

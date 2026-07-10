@@ -67,6 +67,12 @@ LEFT JOIN prospect_season_stats s
        ON s.prospect_id = p.id AND s.season = sqlc.arg(season)
 WHERE p.id = sqlc.arg(id);
 
+-- name: CountSeasonStats :one
+-- How many stat rows exist for a season label. Used to decide whether the
+-- "current" season has data yet or the API should fall back to the previous
+-- season (off-season / pre-season window).
+SELECT COUNT(*) FROM prospect_season_stats WHERE season = sqlc.arg(season);
+
 -- name: ListIngestableProspects :many
 -- HockeyTech-sourced active prospects the cron should refresh. position
 -- decides which bulk feed a prospect is matched against (topscorers vs

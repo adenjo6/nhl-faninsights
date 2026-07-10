@@ -24,8 +24,21 @@ type Server struct {
 
 func New(q *db.Queries) *Server { return &Server{q: q} }
 
+// resolveSeason picks the season label to join stats on: the calendar-current
+// season if it has any rows, otherwise the previous one. This keeps the board
+// showing final totals through the off-season (Current flips on August 1,
+// months before new-season data exists) and switches over automatically once
+// the first 2026-27 lines are ingested.
+func (s *Server) resolveSeason(ctx context.Context) string {
+	cur := season.Current(time.Now())
+	if n, err := s.q.CountSeasonStats(ctx, cur); err == nil && n == 0 {
+		return season.Previous(time.Now())
+	}
+	return cur
+}
+
 func (s *Server) ListProspects(ctx context.Context, req *prospectsv1.ListProspectsRequest) (*prospectsv1.ListProspectsResponse, error) {
-	arg := db.ListProspectsParams{Season: season.Current(time.Now())}
+	arg := db.ListProspectsParams{Season: s.resolveSeason(ctx)}
 	if p := req.GetPosition(); p != "" {
 		arg.Position = &p
 	}
@@ -45,7 +58,7 @@ func (s *Server) ListProspects(ctx context.Context, req *prospectsv1.ListProspec
 
 func (s *Server) GetProspect(ctx context.Context, req *prospectsv1.GetProspectRequest) (*prospectsv1.GetProspectResponse, error) {
 	row, err := s.q.GetProspect(ctx, db.GetProspectParams{
-		Season: season.Current(time.Now()),
+		Season: s.resolveSeason(ctx),
 		ID:     req.GetId(),
 	})
 	if err != nil {
@@ -128,12 +141,14 @@ func toProto(v rowView) *prospectsv1.Prospect {
 			UpdatedAt:   tsToString(v.FetchedAt),
 		}
 		// A goalie row carries the goalie columns; wins is NOT NULL in every
-		// goalie upsert, so its presence identifies the line type.
+		// goalie upsert, so its presence identifies the line type. OTL, GAA,
+		// and SV% keep proto presence: a NULL column (source didn't report
+		// it) stays absent rather than surfacing as a confident 0.
 		if v.Wins != nil {
 			p.CurrentSeason.Goalie = &prospectsv1.GoalieStats{
 				Wins:     derefI32(v.Wins),
 				Losses:   derefI32(v.Losses),
-				OtLosses: derefI32(v.OTL),
+				OtLosses: v.OTL,
 				Shutouts: derefI32(v.SO),
 				Saves:    derefI32(v.Saves),
 				Shots:    derefI32(v.Shots),
@@ -145,15 +160,15 @@ func toProto(v rowView) *prospectsv1.Prospect {
 	return p
 }
 
-func numericToF64(n pgtype.Numeric) float64 {
+func numericToF64(n pgtype.Numeric) *float64 {
 	if !n.Valid {
-		return 0
+		return nil
 	}
 	f, err := n.Float64Value()
 	if err != nil {
-		return 0
+		return nil
 	}
-	return f.Float64
+	return &f.Float64
 }
 
 func derefI32(p *int32) int32 {

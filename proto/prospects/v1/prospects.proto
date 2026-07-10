@@ -51,16 +51,18 @@ message SeasonStats {
 }
 
 // GoalieStats is a goalie's season line. GAA/SV% are the league feed's own
-// computed values (not rederived from the counters).
+// computed values (not rederived from the counters). ot_losses/gaa/sv_pct are
+// optional because some sources don't report them (e.g. the MHL doesn't break
+// out OT losses) — absent means unknown, which the UI renders as "—", never 0.
 message GoalieStats {
   int32  wins = 1;
   int32  losses = 2;
-  int32  ot_losses = 3;
+  optional int32  ot_losses = 3;
   int32  shutouts = 4;
   int32  saves = 5;
   int32  shots = 6;
-  double gaa = 7;                // e.g. 2.51
-  double sv_pct = 8;             // e.g. 0.919
+  optional double gaa = 7;       // e.g. 2.51
+  optional double sv_pct = 8;    // e.g. 0.919
 }
 
 message ListProspectsRequest {
