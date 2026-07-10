@@ -30,8 +30,22 @@ router = APIRouter()
 PROSPECTS_CACHE_TTL = 6 * 60 * 60  # 6 hours
 
 
+class GoalieStats(BaseModel):
+    """A goalie's season line. GAA/SV% are the league feed's own computed
+    values (e.g. 2.51 / 0.919), not rederived from the counters."""
+    wins: int
+    losses: int
+    ot_losses: int
+    shutouts: int
+    saves: int
+    shots: int
+    gaa: float
+    sv_pct: float
+
+
 class SeasonStats(BaseModel):
-    """A prospect's current-season totals (CHL/AHL via HockeyTech)."""
+    """A prospect's current-season totals (CHL/AHL via HockeyTech). For
+    goalies the skater counters are 0 and `goalie` is set."""
     season: str
     games_played: int
     goals: int
@@ -40,6 +54,7 @@ class SeasonStats(BaseModel):
     plus_minus: int
     pim: int
     updated_at: str  # ISO8601 UTC, when the Go ingest last fetched these
+    goalie: Optional[GoalieStats] = None
 
 
 class Prospect(BaseModel):
@@ -66,6 +81,19 @@ def _to_model(p) -> Prospect:
     season = None
     if p.HasField("current_season"):
         s = p.current_season
+        goalie = None
+        if s.HasField("goalie"):
+            g = s.goalie
+            goalie = GoalieStats(
+                wins=g.wins,
+                losses=g.losses,
+                ot_losses=g.ot_losses,
+                shutouts=g.shutouts,
+                saves=g.saves,
+                shots=g.shots,
+                gaa=g.gaa,
+                sv_pct=g.sv_pct,
+            )
         season = SeasonStats(
             season=s.season,
             games_played=s.games_played,
@@ -75,6 +103,7 @@ def _to_model(p) -> Prospect:
             plus_minus=s.plus_minus,
             pim=s.pim,
             updated_at=s.updated_at,
+            goalie=goalie,
         )
     return Prospect(
         id=p.id,

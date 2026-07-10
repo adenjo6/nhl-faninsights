@@ -37,4 +37,12 @@ type ProspectSeasonStat struct {
 	PlusMinus   int32              `json:"plus_minus"`
 	Pim         int32              `json:"pim"`
 	FetchedAt   pgtype.Timestamptz `json:"fetched_at"`
+	Wins        *int32             `json:"wins"`
+	Losses      *int32             `json:"losses"`
+	OtLosses    *int32             `json:"ot_losses"`
+	Shutouts    *int32             `json:"shutouts"`
+	Saves       *int32             `json:"saves"`
+	Shots       *int32             `json:"shots"`
+	Gaa         pgtype.Numeric     `json:"gaa"`
+	SvPct       pgtype.Numeric     `json:"sv_pct"`
 }

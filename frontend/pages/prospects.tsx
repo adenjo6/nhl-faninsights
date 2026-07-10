@@ -1,5 +1,16 @@
 import { useState, useEffect, useMemo } from "react";
 
+type GoalieStats = {
+  wins: number;
+  losses: number;
+  ot_losses: number;
+  shutouts: number;
+  saves: number;
+  shots: number;
+  gaa: number;
+  sv_pct: number;
+};
+
 type SeasonStats = {
   season: string;
   games_played: number;
@@ -9,6 +20,9 @@ type SeasonStats = {
   plus_minus: number;
   pim: number;
   updated_at: string;
+  // Set only for goalies; its presence marks the line as a goalie line (the
+  // skater counters above stay 0).
+  goalie?: GoalieStats | null;
 };
 
 type Prospect = {
@@ -113,18 +127,30 @@ export default function Prospects() {
     [prospects, position, league]
   );
 
-  // Two cohorts: skaters with a live feed (ranked by the chosen stat) and the
-  // watch list (goalies / NCAA / Europe) with no current-season line.
+  // Three cohorts: skaters with a live feed (ranked by the chosen stat),
+  // goalies with a live feed (the crease, fixed GP order), and the watch list
+  // (NCAA / Europe / unfeedable goalies) with no current-season line.
   const skaters = useMemo(
     () =>
       filtered
-        .filter((p) => p.current_season)
+        .filter((p) => p.current_season && !p.current_season.goalie)
         .sort(
           (a, b) =>
             (b.current_season![sortKey] - a.current_season![sortKey]) ||
             a.full_name.localeCompare(b.full_name)
         ),
     [filtered, sortKey]
+  );
+  const goalies = useMemo(
+    () =>
+      filtered
+        .filter((p) => p.current_season?.goalie)
+        .sort(
+          (a, b) =>
+            (b.current_season!.games_played - a.current_season!.games_played) ||
+            a.full_name.localeCompare(b.full_name)
+        ),
+    [filtered]
   );
   const watching = useMemo(
     () =>
@@ -279,6 +305,7 @@ export default function Prospects() {
         </div>
       ) : (
         <div className="board-scroll">
+          {skaters.length > 0 && (
           <table className="board">
             <thead>
               <tr>
@@ -364,42 +391,82 @@ export default function Prospects() {
                   </tr>
                 );
               })}
-
-              {watching.length > 0 && (
-                <tr className="divider-row">
-                  <td colSpan={5 + STAT_COLUMNS.length}>
-                    <span className="divider">
-                      Watching · no live feed yet
-                    </span>
-                  </td>
-                </tr>
-              )}
-
-              {watching.map((p) => (
-                <tr key={p.id} className="row watch">
-                  <td className="col-rank rank">·</td>
-                  <td className="col-player">
-                    {renderName(p)}
-                  </td>
-                  <td className="col-meta pos">{p.position}</td>
-                  <td className="col-meta lg">{p.league}</td>
-                  <td className="col-team team">{p.team_name || "—"}</td>
-                  {STAT_COLUMNS.map((col) => (
-                    <td key={col.key} className="col-stat statnum dash">
-                      —
-                    </td>
-                  ))}
-                </tr>
-              ))}
             </tbody>
           </table>
+          )}
+
+          {goalies.length > 0 && (
+            <>
+              <p className="section-h">In the Crease</p>
+              <table className="board">
+                <thead>
+                  <tr>
+                    <th className="col-rank" scope="col">#</th>
+                    <th className="col-player" scope="col">Player</th>
+                    <th className="col-meta" scope="col">Lg</th>
+                    <th className="col-team" scope="col">Team</th>
+                    <th className="col-stat" scope="col" title="Games played">GP</th>
+                    <th className="col-stat" scope="col" title="Wins – losses – OT/SO losses">Record</th>
+                    <th className="col-stat" scope="col" title="Goals-against average">GAA</th>
+                    <th className="col-stat" scope="col" title="Save percentage">SV%</th>
+                    <th className="col-stat" scope="col" title="Shutouts">SO</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {goalies.map((p, i) => {
+                    const s = p.current_season!;
+                    const g = s.goalie!;
+                    return (
+                      <tr key={p.id} className="row">
+                        <td className="col-rank rank">{i + 1}</td>
+                        <td className="col-player">{renderName(p)}</td>
+                        <td className="col-meta lg">{p.league}</td>
+                        <td className="col-team team">{p.team_name || "—"}</td>
+                        <td className="col-stat statnum">{s.games_played}</td>
+                        <td className="col-stat statnum">
+                          {g.wins}-{g.losses}-{g.ot_losses}
+                        </td>
+                        <td className="col-stat statnum">{g.gaa.toFixed(2)}</td>
+                        <td className="col-stat statnum">
+                          {g.sv_pct.toFixed(3).replace(/^0\./, ".")}
+                        </td>
+                        <td className="col-stat statnum">{g.shutouts}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </>
+          )}
+
+          {watching.length > 0 && (
+            <>
+              <p className="section-h muted">Watching · no live feed yet</p>
+              <table className="board">
+                <tbody>
+                  {watching.map((p) => (
+                    <tr key={p.id} className="row watch">
+                      <td className="col-rank rank">·</td>
+                      <td className="col-player">
+                        {renderName(p)}
+                      </td>
+                      <td className="col-meta pos">{p.position}</td>
+                      <td className="col-meta lg">{p.league}</td>
+                      <td className="col-team team">{p.team_name || "—"}</td>
+                      <td className="col-stat statnum dash">—</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
         </div>
       )}
 
       <p className="footnote">
-        Skaters show live current-season totals from the CHL and AHL, refreshed
-        daily. Goalies and NCAA / European players link out to Elite Prospects
-        until a live feed is available.
+        Skaters and goalies show live current-season stats from the CHL and
+        AHL, refreshed daily. NCAA / European players link out to Elite
+        Prospects until a live feed is available.
       </p>
     </main>
   );
@@ -562,12 +629,12 @@ const styles = `
   }
   .gaugenum.lead { color: #C2540A; }
 
-  .divider-row td { padding: 1.3rem 0 0.5rem; }
-  .divider {
+  .section-h {
     font-family: 'Saira Condensed', sans-serif; font-weight: 600;
     text-transform: uppercase; letter-spacing: 0.16em; font-size: 0.72rem;
-    color: #9DB3B2;
+    color: #006D75; margin: 1.6rem 0 0.5rem;
   }
+  .section-h.muted { color: #9DB3B2; }
   .row.watch td { padding-top: 0.6rem; padding-bottom: 0.6rem; }
 
   .empty {
