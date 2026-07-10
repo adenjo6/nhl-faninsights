@@ -27,6 +27,7 @@ const (
 	ohlKey   = "2976319eb44abe94"
 	whlKey   = "41b145a848f4bd67"
 	qmjhlKey = "f1aa699db3d81487" // client_code "lhjmq"
+	ahlKey   = "ccb91f29d6744675"
 )
 
 // SeasonLine is a single player's regular-season totals for one league/season.
@@ -54,7 +55,7 @@ func NewClient() *Client {
 			"ohl":   ohlKey,
 			"whl":   whlKey,
 			"lhjmq": qmjhlKey, // QMJHL
-			// AHL uses its own key; add it here when seeding Barracuda prospects.
+			"ahl":   ahlKey,
 		},
 	}
 }
