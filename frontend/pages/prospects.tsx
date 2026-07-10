@@ -464,9 +464,9 @@ export default function Prospects() {
       )}
 
       <p className="footnote">
-        Skaters and goalies show live current-season stats from the CHL and
-        AHL, refreshed daily. NCAA / European players link out to Elite
-        Prospects until a live feed is available.
+        CHL and AHL stats are live, refreshed daily. NCAA, USports, and
+        European lines are final 2025–26 season totals. Every player links
+        out to Elite Prospects.
       </p>
     </main>
   );
