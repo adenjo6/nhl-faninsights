@@ -252,17 +252,19 @@ func (x *SeasonStats) GetGoalie() *GoalieStats {
 }
 
 // GoalieStats is a goalie's season line. GAA/SV% are the league feed's own
-// computed values (not rederived from the counters).
+// computed values (not rederived from the counters). ot_losses/gaa/sv_pct are
+// optional because some sources don't report them (e.g. the MHL doesn't break
+// out OT losses) — absent means unknown, which the UI renders as "—", never 0.
 type GoalieStats struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Wins          int32                  `protobuf:"varint,1,opt,name=wins,proto3" json:"wins,omitempty"`
 	Losses        int32                  `protobuf:"varint,2,opt,name=losses,proto3" json:"losses,omitempty"`
-	OtLosses      int32                  `protobuf:"varint,3,opt,name=ot_losses,json=otLosses,proto3" json:"ot_losses,omitempty"`
+	OtLosses      *int32                 `protobuf:"varint,3,opt,name=ot_losses,json=otLosses,proto3,oneof" json:"ot_losses,omitempty"`
 	Shutouts      int32                  `protobuf:"varint,4,opt,name=shutouts,proto3" json:"shutouts,omitempty"`
 	Saves         int32                  `protobuf:"varint,5,opt,name=saves,proto3" json:"saves,omitempty"`
 	Shots         int32                  `protobuf:"varint,6,opt,name=shots,proto3" json:"shots,omitempty"`
-	Gaa           float64                `protobuf:"fixed64,7,opt,name=gaa,proto3" json:"gaa,omitempty"`                  // e.g. 2.51
-	SvPct         float64                `protobuf:"fixed64,8,opt,name=sv_pct,json=svPct,proto3" json:"sv_pct,omitempty"` // e.g. 0.919
+	Gaa           *float64               `protobuf:"fixed64,7,opt,name=gaa,proto3,oneof" json:"gaa,omitempty"`                  // e.g. 2.51
+	SvPct         *float64               `protobuf:"fixed64,8,opt,name=sv_pct,json=svPct,proto3,oneof" json:"sv_pct,omitempty"` // e.g. 0.919
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -312,8 +314,8 @@ func (x *GoalieStats) GetLosses() int32 {
 }
 
 func (x *GoalieStats) GetOtLosses() int32 {
-	if x != nil {
-		return x.OtLosses
+	if x != nil && x.OtLosses != nil {
+		return *x.OtLosses
 	}
 	return 0
 }
@@ -340,15 +342,15 @@ func (x *GoalieStats) GetShots() int32 {
 }
 
 func (x *GoalieStats) GetGaa() float64 {
-	if x != nil {
-		return x.Gaa
+	if x != nil && x.Gaa != nil {
+		return *x.Gaa
 	}
 	return 0
 }
 
 func (x *GoalieStats) GetSvPct() float64 {
-	if x != nil {
-		return x.SvPct
+	if x != nil && x.SvPct != nil {
+		return *x.SvPct
 	}
 	return 0
 }
@@ -566,16 +568,20 @@ const file_prospects_v1_prospects_proto_rawDesc = "" +
 	"\x03pim\x18\a \x01(\x05R\x03pim\x12\x1d\n" +
 	"\n" +
 	"updated_at\x18\b \x01(\tR\tupdatedAt\x121\n" +
-	"\x06goalie\x18\t \x01(\v2\x19.prospects.v1.GoalieStatsR\x06goalie\"\xc7\x01\n" +
+	"\x06goalie\x18\t \x01(\v2\x19.prospects.v1.GoalieStatsR\x06goalie\"\xf7\x01\n" +
 	"\vGoalieStats\x12\x12\n" +
 	"\x04wins\x18\x01 \x01(\x05R\x04wins\x12\x16\n" +
-	"\x06losses\x18\x02 \x01(\x05R\x06losses\x12\x1b\n" +
-	"\tot_losses\x18\x03 \x01(\x05R\botLosses\x12\x1a\n" +
+	"\x06losses\x18\x02 \x01(\x05R\x06losses\x12 \n" +
+	"\tot_losses\x18\x03 \x01(\x05H\x00R\botLosses\x88\x01\x01\x12\x1a\n" +
 	"\bshutouts\x18\x04 \x01(\x05R\bshutouts\x12\x14\n" +
 	"\x05saves\x18\x05 \x01(\x05R\x05saves\x12\x14\n" +
-	"\x05shots\x18\x06 \x01(\x05R\x05shots\x12\x10\n" +
-	"\x03gaa\x18\a \x01(\x01R\x03gaa\x12\x15\n" +
-	"\x06sv_pct\x18\b \x01(\x01R\x05svPct\"J\n" +
+	"\x05shots\x18\x06 \x01(\x05R\x05shots\x12\x15\n" +
+	"\x03gaa\x18\a \x01(\x01H\x01R\x03gaa\x88\x01\x01\x12\x1a\n" +
+	"\x06sv_pct\x18\b \x01(\x01H\x02R\x05svPct\x88\x01\x01B\f\n" +
+	"\n" +
+	"_ot_lossesB\x06\n" +
+	"\x04_gaaB\t\n" +
+	"\a_sv_pct\"J\n" +
 	"\x14ListProspectsRequest\x12\x1a\n" +
 	"\bposition\x18\x01 \x01(\tR\bposition\x12\x16\n" +
 	"\x06league\x18\x02 \x01(\tR\x06league\"M\n" +
@@ -632,6 +638,7 @@ func file_prospects_v1_prospects_proto_init() {
 	if File_prospects_v1_prospects_proto != nil {
 		return
 	}
+	file_prospects_v1_prospects_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

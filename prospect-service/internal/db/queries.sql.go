@@ -11,6 +11,20 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countSeasonStats = `-- name: CountSeasonStats :one
+SELECT COUNT(*) FROM prospect_season_stats WHERE season = $1
+`
+
+// How many stat rows exist for a season label. Used to decide whether the
+// "current" season has data yet or the API should fall back to the previous
+// season (off-season / pre-season window).
+func (q *Queries) CountSeasonStats(ctx context.Context, season string) (int64, error) {
+	row := q.db.QueryRow(ctx, countSeasonStats, season)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const getProspect = `-- name: GetProspect :one
 SELECT
     p.id,

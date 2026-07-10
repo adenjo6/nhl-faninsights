@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo } from "react";
 
+// ot_losses/gaa/sv_pct are null when the source doesn't report them —
+// unknown renders as an em dash, never as 0 (a 0.00 GAA would read as a
+// league-best line, not missing data).
 type GoalieStats = {
   wins: number;
   losses: number;
-  ot_losses: number;
+  ot_losses: number | null;
   shutouts: number;
   saves: number;
   shots: number;
-  gaa: number;
-  sv_pct: number;
+  gaa: number | null;
+  sv_pct: number | null;
 };
 
 type SeasonStats = {
@@ -424,11 +427,16 @@ export default function Prospects() {
                         <td className="col-team team">{p.team_name || "—"}</td>
                         <td className="col-stat statnum">{s.games_played}</td>
                         <td className="col-stat statnum">
-                          {g.wins}-{g.losses}-{g.ot_losses}
+                          {g.wins}-{g.losses}
+                          {g.ot_losses != null ? `-${g.ot_losses}` : ""}
                         </td>
-                        <td className="col-stat statnum">{g.gaa.toFixed(2)}</td>
                         <td className="col-stat statnum">
-                          {g.sv_pct.toFixed(3).replace(/^0\./, ".")}
+                          {g.gaa != null ? g.gaa.toFixed(2) : "—"}
+                        </td>
+                        <td className="col-stat statnum">
+                          {g.sv_pct != null
+                            ? g.sv_pct.toFixed(3).replace(/^0\./, ".")
+                            : "—"}
                         </td>
                         <td className="col-stat statnum">{g.shutouts}</td>
                       </tr>
@@ -443,6 +451,16 @@ export default function Prospects() {
             <>
               <p className="section-h muted">Watching · no live feed yet</p>
               <table className="board">
+                <thead>
+                  <tr>
+                    <th className="col-rank" scope="col"></th>
+                    <th className="col-player" scope="col">Player</th>
+                    <th className="col-meta" scope="col">Pos</th>
+                    <th className="col-meta" scope="col">Lg</th>
+                    <th className="col-team" scope="col">Team</th>
+                    <th className="col-stat" scope="col"></th>
+                  </tr>
+                </thead>
                 <tbody>
                   {watching.map((p) => (
                     <tr key={p.id} className="row watch">

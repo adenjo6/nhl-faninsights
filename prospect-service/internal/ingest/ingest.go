@@ -93,6 +93,12 @@ func (i *Ingester) ingestSkaters(ctx context.Context, cc, seasonLabel string, pl
 			log.Printf("ingest: %s (%s/%s) not found in skater feed", p.FullName, cc, *p.HockeytechPlayerID)
 			continue
 		}
+		// Pre-season feeds list rostered players with 0 GP. Skip them so an
+		// all-zero row doesn't count as "the new season has data" and flip
+		// the API off its previous-season fallback prematurely.
+		if line.GamesPlayed == 0 {
+			continue
+		}
 		team := line.TeamName
 		if err := i.q.UpsertSeasonStats(ctx, db.UpsertSeasonStatsParams{
 			ProspectID:  p.ID,
@@ -127,6 +133,9 @@ func (i *Ingester) ingestGoalies(ctx context.Context, cc, seasonLabel string, pl
 		line, ok := lines[*p.HockeytechPlayerID]
 		if !ok {
 			log.Printf("ingest: %s (%s/%s) not found in goalie feed", p.FullName, cc, *p.HockeytechPlayerID)
+			continue
+		}
+		if line.GamesPlayed == 0 { // see skater ingest: pre-season zero rows
 			continue
 		}
 		team := line.TeamName
