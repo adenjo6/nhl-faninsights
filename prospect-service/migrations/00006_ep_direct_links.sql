@@ -93,9 +93,24 @@ UPDATE prospects SET eliteprospects_url = 'https://www.eliteprospects.com/player
 
 -- +goose Down
 -- +goose StatementBegin
--- Restore the search-style links (previous seed convention).
+-- Restore the search-style links (previous seed convention) — scoped to the
+-- 40 rows the Up touched, so a rollback can't clobber prospects added or
+-- hand-corrected afterwards.
 UPDATE prospects
    SET eliteprospects_url =
        'https://www.eliteprospects.com/search/player?q='
-       || replace(regexp_replace(full_name, '\s*\([^)]*\)\s*', ' ', 'g'), ' ', '+');
+       || replace(regexp_replace(full_name, '\s*\([^)]*\)\s*', ' ', 'g'), ' ', '+')
+ WHERE full_name IN (
+    'Haoxi (Simon) Wang', 'Christian Kirsch', 'Carson Wetsch', 'Max Heise',
+    'Joshua Ravensbergen', 'Teddy Mutryn', 'Michael Misa', 'Quentin Musty',
+    'Filip Bystedt', 'Cameron Lund', 'Igor Chernyshov', 'Luca Cagnoni',
+    'Mattias Hävelid', 'Ethan Cardwell', 'Zack Ostapchuk', 'Nolan Allan',
+    'Eric Pohlkamp', 'Ryan Lin', 'Jake Gustafson', 'Alexander Karmanov',
+    'Cole McKinney', 'Keaton Verhoeff', 'Joey Muldowney', 'Reese Laubach',
+    'Richard Gallant', 'Colton Roberts', 'Nate Misskey', 'Michael Fisher',
+    'David Klee', 'Andre Gasseau', 'Eli Barnett', 'Ivar Stenberg',
+    'Leo Sahlin Wallenius', 'Axel Landén', 'Yegor Rimashevsky',
+    'Ilyas Magomedsultanov', 'Yegor Spiridonov', 'Phillip Sinn',
+    'Yaroslav Korostelyov', 'Brady Knowling'
+ );
 -- +goose StatementEnd

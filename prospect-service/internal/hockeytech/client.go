@@ -183,6 +183,7 @@ func (c *Client) fetchTopGoalies(ctx context.Context, clientCode, key, seasonID 
 				W        string `json:"wins"`
 				L        string `json:"losses"`
 				OTL      string `json:"ot_losses"`
+				SOL      string `json:"shootout_losses"`
 				SO       string `json:"shutouts"`
 				Saves    string `json:"saves"`
 				Shots    string `json:"shots"`
@@ -210,7 +211,10 @@ func (c *Client) fetchTopGoalies(ctx context.Context, clientCode, key, seasonID 
 			GamesPlayed: atoi(r.GP),
 			Wins:        atoi(r.W),
 			Losses:      atoi(r.L),
-			OTLosses:    atoi(r.OTL),
+			// The feed splits overtime and shootout losses; leagues publish
+			// W-L-OTL with both counted, so combine them (and the UI labels
+			// the column "OT/SO losses").
+			OTLosses:    atoi(r.OTL) + atoi(r.SOL),
 			Shutouts:    atoi(r.SO),
 			Saves:       atoi(r.Saves),
 			Shots:       atoi(r.Shots),
